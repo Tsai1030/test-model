@@ -1,0 +1,21 @@
+{
+    // 這是 Python 專案：停用 C/C++ 擴充功能的 IntelliSense，並排除 .venv（torch 等套件含大量 C 標頭檔），
+    // 避免背景建索引占用 CPU、干擾速度測試
+    "C_Cpp.intelliSenseEngine": "disabled",
+    "C_Cpp.files.exclude": {
+        "**/.venv*": true
+    },
+    // 大量音檔、套件、結果檔：VS Code 不必監看變動
+    "files.watcherExclude": {
+        "**/.venv*/**": true,
+        "**/data/audio/**": true,
+        "**/data/cache/**": true,
+        "**/data/dialogue/audio/**": true,
+        "**/results/**": true
+    },
+    "search.exclude": {
+        "**/.venv*": true,
+        "**/data/audio": true,
+        "**/results": true
+    }
+}

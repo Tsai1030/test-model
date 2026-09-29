@@ -1,0 +1,6 @@
+{"id": "q01", "text": "What time does the museum close today?", "facts": [["17", "5", "five"]]}
+{"id": "q02", "text": "How much is a ticket for adults?", "facts": [["12", "twelve"]]}
+{"id": "q03", "text": "Where can I find the restroom?", "facts": [["ground floor", "entrance"]]}
+{"id": "q04", "text": "Am I allowed to take photos inside?", "facts": [["flash"]]}
+{"id": "q05", "text": "When was this building built?", "facts": [["1885"]]}
+{"id": "q06", "text": "Is there somewhere I can get a coffee?", "facts": [["terrace", "top floor", "rooftop"]]}

@@ -1,0 +1,25 @@
+# 主環境（.venv-core）：faster-whisper + Kokoro + Piper + llama.cpp + 評分工具
+# 安裝：uv pip install -r requirements/core.txt --python .venv-core --index-strategy unsafe-best-match
+#       （uv 預設只用第一個找到套件的 index，會拿到 PyTorch index 上的舊版 requests/certifi；此選項等同 pip 行為）
+# 安裝後還要下載日語字典（約 500 MB，只需一次）：.venv-core\Scripts\python.exe -m unidic download
+# Kokoro 的西語/葡語需要系統安裝 espeak-ng（Windows：到 github.com/espeak-ng/espeak-ng/releases 下載 .msi）
+--extra-index-url https://download.pytorch.org/whl/cpu
+--extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cpu
+-r base.txt
+faster-whisper
+torch
+torchaudio
+transformers>=4.40      # Kokoro 需要；不設下限時，解析器會為了 huggingface-hub 2.x 退回 2019 年的 transformers 2.3.0
+kokoro
+# = misaki[ja]，但 pyopenjtalk 在 Windows 只有原始碼（需 MSVC 編譯），改用有預編譯 wheel 的分支 pyopenjtalk-plus（import 名稱相同）
+# Kokoro 日語預設走 cutlet（fugashi + unidic 字典）；pyopenjtalk 只需能 import，不影響合成結果
+misaki
+en_core_web_sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl   # misaki 英語 G2P；不預裝時會在執行時用 pip 下載（uv 環境沒有 pip 會失敗）
+fugashi
+jaconv
+mojimoji
+unidic
+pyopenjtalk-plus
+piper-tts
+llama-cpp-python
+pykakasi

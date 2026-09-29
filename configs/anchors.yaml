@@ -1,0 +1,9 @@
+# 錨點模型：同一個模型在開發機與 Jetson 上各跑一次，用來算經驗換算係數 k。
+# source = 開發機上的模型 id；target = Jetson 上對應的模型 id（通常是 cuda 版本）。
+# 每個 backend_category 至少要有一組錨點，係數才會被校準。
+anchors:
+  - {source: whisper-small-ct2-int8, target: whisper-small-ct2-fp16-cuda}      # ct2-cpu
+  - {source: whisper-large-v3-turbo-ct2-int8, target: whisper-large-v3-turbo-ct2-fp16-cuda}
+  - {source: kokoro-82m, target: kokoro-82m-cuda}                               # torch-cpu
+  - {source: piper-medium, target: piper-medium}                                # onnx-cpu（Jetson 上可改 use_cuda）
+  - {source: gemma-3-4b-q4, target: gemma-3-4b-q4-cuda}                         # llamacpp-cpu（由對話測試校準）

@@ -1,0 +1,30 @@
+# 統一評分：先過硬性門檻（gate），再把各指標線性換成 0–100 分，最後依情境加權。
+# 門檻與權重都是初步提案，可以依討論結果調整。
+
+# 推薦組合優先採用哪個硬體的數據（前者優先）
+target_hw_priority: [jetson-orin-nx, jetson-orin-nx-est, pc]
+
+gates:
+  commercial_only: false          # PoC：不排除非商用授權（報告仍列出授權）
+  jetson_rtf_max: 0.5             # 只套用在 jetson* 硬體 profile
+  memory_budget_mb:               # 模型占用記憶體上限（Jetson 16GB 共用）
+    stt: 2048
+    tts: 2048
+    dialogue: 11264               # STT + LLM + TTS 整條鏈路
+
+# [100 分的值, 0 分的值]，中間線性內插，超出範圍截斷
+scales:
+  err_rate: [0.05, 0.30]          # WER / CER
+  rtf: [0.1, 1.0]
+  ttfa_ms: [200, 1500]
+  mos: [4.5, 2.5]                 # 人工 MOS 優先，沒有時用 UTMOS
+  mem_mb: [500, 4096]
+  turn_latency_ms: [800, 3000]
+  ratio: [1.0, 0.0]               # fact_recall、lang_ok_rate 等 0–1 比例
+
+weights:
+  stt: {accuracy: 40, speed: 30, robustness: 15, resource: 15}
+  tts: {naturalness: 35, intelligibility: 25, ttfa: 25, resource: 15}
+  dialogue: {quality: 40, latency: 35, naturalness: 25}
+
+robustness_condition: snr10       # STT 穩健性分數取這個噪音條件的 WER/CER

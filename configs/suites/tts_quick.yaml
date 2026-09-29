@@ -1,0 +1,10 @@
+name: tts_quick
+task: tts
+models: [kokoro-82m, piper-medium, melotts, xtts-v2, chatterbox-mtl]
+languages: [en, es-ES, es-419, pt-BR, pt-PT, ja]
+text_dir: data/tour_texts
+text_set: tour
+n_samples: 10
+warmup: 2
+sentence_split: true
+# 評分：python score.py results/<run_id> --asr-judge whisper-large-v3-ct2-int8 --utmos

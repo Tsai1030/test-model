@@ -1,0 +1,11 @@
+# 導覽腳本範例（請換成實際導覽內容）。一行一段，# 開頭為註解。刻意包含數字、年份、時間、金額。
+Welcome to the Harbor History Museum. Our tour will take about forty-five minutes.
+This building was completed in 1885 and served as the city's customs house for almost a century.
+Please stay close to the group and keep your ticket with you at all times.
+On your left, you can see the original clock tower, which is 32 meters tall.
+The museum opens at 9:00 a.m. and closes at 5:00 p.m., and it is closed on Mondays.
+Admission is 12 euros for adults and free for children under 12.
+In this room, you will find maps drawn by sailors in the 17th century.
+The restrooms are on the ground floor, next to the main entrance.
+If you have any questions, feel free to ask me at any time.
+Next, we will visit the rooftop terrace, where you can enjoy a great view of the old harbor.

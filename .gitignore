@@ -1,0 +1,11 @@
+.venv*/
+__pycache__/
+data/audio/
+data/dialogue/audio/
+data/recordings/
+data/noise/
+data/manifests/
+data/cache/
+logs/
+results/
+reports/

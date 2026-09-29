@@ -1,0 +1,189 @@
+# 模型註冊表。run.py / score.py 以 id 引用。
+#   engine:            轉接器類別（module:Class）
+#   params:            傳給轉接器的參數
+#   langs:             STT 支援的語言（本專案語言碼）；TTS 以 voices 的 key 決定支援哪些語言
+#   backend_category:  換算 Jetson 速度時使用的類別（見 configs/hardware.yaml）
+#   license:           授權（PoC 階段不設限，但報告會列出）
+#
+# 尚未寫轉接器的候選（之後加入）：SenseVoice-Small、ReazonSpeech、sherpa-onnx 串流 zipformer、
+# Vosk、Moonshine、CosyVoice 2/3、Style-BERT-VITS2、Fish-Speech、F5-TTS、Parler-TTS
+
+all_langs: &all_langs [en, es-ES, es-419, pt-BR, pt-PT, ja]
+eu_langs: &eu_langs [en, es-ES, es-419, pt-BR, pt-PT]
+
+stt:
+  # ---- Whisper（faster-whisper / CTranslate2）：多語基準線，不同大小比較速度與準確度的取捨
+  whisper-tiny-ct2-int8:
+    engine: engines.stt.faster_whisper_engine:FasterWhisperSTT
+    params: {model: tiny, device: cpu, compute_type: int8, cpu_threads: 4, beam_size: 1}
+    langs: *all_langs
+    backend_category: ct2-cpu
+    license: MIT
+  whisper-base-ct2-int8:
+    engine: engines.stt.faster_whisper_engine:FasterWhisperSTT
+    params: {model: base, device: cpu, compute_type: int8, cpu_threads: 4, beam_size: 1}
+    langs: *all_langs
+    backend_category: ct2-cpu
+    license: MIT
+  whisper-small-ct2-int8:
+    engine: engines.stt.faster_whisper_engine:FasterWhisperSTT
+    params: {model: small, device: cpu, compute_type: int8, cpu_threads: 4, beam_size: 1}
+    langs: *all_langs
+    backend_category: ct2-cpu
+    license: MIT
+  whisper-small-ct2-int8-beam5:          # 解碼參數比較：beam 5 通常較準、較慢
+    engine: engines.stt.faster_whisper_engine:FasterWhisperSTT
+    params: {model: small, device: cpu, compute_type: int8, cpu_threads: 4, beam_size: 5}
+    langs: *all_langs
+    backend_category: ct2-cpu
+    license: MIT
+  whisper-medium-ct2-int8:
+    engine: engines.stt.faster_whisper_engine:FasterWhisperSTT
+    params: {model: medium, device: cpu, compute_type: int8, cpu_threads: 4, beam_size: 1}
+    langs: *all_langs
+    backend_category: ct2-cpu
+    license: MIT
+  whisper-large-v3-turbo-ct2-int8:
+    engine: engines.stt.faster_whisper_engine:FasterWhisperSTT
+    params: {model: large-v3-turbo, device: cpu, compute_type: int8, cpu_threads: 4, beam_size: 1}
+    langs: *all_langs
+    backend_category: ct2-cpu
+    license: MIT
+  whisper-large-v3-ct2-int8:             # 準確度上限參考，也當 TTS 可懂度的 ASR 評審
+    engine: engines.stt.faster_whisper_engine:FasterWhisperSTT
+    params: {model: large-v3, device: cpu, compute_type: int8, cpu_threads: 4, beam_size: 1}
+    langs: *all_langs
+    backend_category: ct2-cpu
+    license: MIT
+
+  # ---- 單語專用模型
+  distil-large-v3-ct2-int8:
+    engine: engines.stt.faster_whisper_engine:FasterWhisperSTT
+    params: {model: distil-large-v3, device: cpu, compute_type: int8, cpu_threads: 4, beam_size: 1}
+    langs: [en]
+    backend_category: ct2-cpu
+    license: MIT
+  kotoba-whisper-v2-ct2-int8:            # repo 名稱請在 P0 確認
+    engine: engines.stt.faster_whisper_engine:FasterWhisperSTT
+    params: {model: kotoba-tech/kotoba-whisper-v2.0-faster, device: cpu, compute_type: int8, cpu_threads: 4, beam_size: 1}
+    langs: [ja]
+    backend_category: ct2-cpu
+    license: Apache-2.0
+
+  # ---- 後端比較：同一個 Whisper small 改用 PyTorch（transformers）
+  whisper-small-hf-fp32:
+    engine: engines.stt.hf_engine:HFPipelineSTT
+    params: {model: openai/whisper-small, device: cpu, dtype: float32, num_threads: 4}
+    langs: *all_langs
+    backend_category: torch-cpu
+    license: MIT
+
+  # ---- NVIDIA NeMo（歐語；Windows 請改用 WSL2 / Colab）
+  parakeet-tdt-0.6b-v3:
+    engine: engines.stt.nemo_engine:NeMoSTT
+    params: {model: nvidia/parakeet-tdt-0.6b-v3, device: cpu}
+    langs: *eu_langs
+    backend_category: nemo-cpu
+    license: CC-BY-4.0
+  canary-1b-v2:
+    engine: engines.stt.nemo_engine:NeMoSTT
+    params: {model: nvidia/canary-1b-v2, device: cpu, canary: true}
+    langs: *eu_langs
+    backend_category: nemo-cpu
+    license: CC-BY-4.0
+
+  # ---- Jetson 版本（device: cuda）：在 Jetson 上實測時使用
+  whisper-small-ct2-fp16-cuda:
+    engine: engines.stt.faster_whisper_engine:FasterWhisperSTT
+    params: {model: small, device: cuda, compute_type: float16, beam_size: 1}
+    langs: *all_langs
+    backend_category: ct2-cuda
+    license: MIT
+  whisper-large-v3-turbo-ct2-fp16-cuda:
+    engine: engines.stt.faster_whisper_engine:FasterWhisperSTT
+    params: {model: large-v3-turbo, device: cuda, compute_type: float16, beam_size: 1}
+    langs: *all_langs
+    backend_category: ct2-cuda
+    license: MIT
+
+tts:
+  kokoro-82m:
+    engine: engines.tts.kokoro_engine:KokoroTTS
+    params: {device: cpu}
+    voices: {en: af_heart, es-ES: ef_dora, es-419: ef_dora, pt-BR: pf_dora, ja: jf_alpha}   # 無 pt-PT
+    backend_category: torch-cpu
+    license: Apache-2.0
+  kokoro-82m-cuda:
+    engine: engines.tts.kokoro_engine:KokoroTTS
+    params: {device: cuda}
+    voices: {en: af_heart, es-ES: ef_dora, es-419: ef_dora, pt-BR: pf_dora, ja: jf_alpha}
+    backend_category: torch-cuda
+    license: Apache-2.0
+  piper-medium:
+    engine: engines.tts.piper_engine:PiperTTS
+    params: {use_cuda: false}
+    voices:                                  # 無日語
+      en: en_US-lessac-medium
+      es-ES: es_ES-davefx-medium
+      es-419: es_MX-ald-medium
+      pt-BR: pt_BR-faber-medium
+      pt-PT: pt_PT-tugão-medium
+    backend_category: onnx-cpu
+    license: GPL-3.0 (engine 1.3+) / per-voice
+  melotts:
+    engine: engines.tts.melo_engine:MeloTTS
+    params: {device: cpu}
+    voices: {en: "EN:EN-US", es-ES: "ES:ES", es-419: "ES:ES", ja: "JP:JP"}   # 無葡語
+    backend_category: torch-cpu
+    license: MIT
+  xtts-v2:
+    engine: engines.tts.xtts_engine:XTTSv2
+    params: {device: cpu}
+    voices: {en: Ana Florence, es-ES: Ana Florence, es-419: Ana Florence,
+             pt-BR: Ana Florence, pt-PT: Ana Florence, ja: Ana Florence}
+    backend_category: torch-cpu
+    license: CPML (non-commercial)
+  chatterbox-mtl:
+    engine: engines.tts.chatterbox_engine:ChatterboxMultilingualTTS
+    params: {device: cpu}
+    voices: {en: default, es-ES: default, es-419: default, pt-BR: default, pt-PT: default, ja: default}
+    backend_category: torch-cpu
+    license: MIT
+
+llm:
+  qwen2.5-1.5b-q4:
+    engine: engines.llm.llama_cpp_engine:LlamaCppLLM
+    params: {repo_id: Qwen/Qwen2.5-1.5B-Instruct-GGUF, filename: "*q4_k_m.gguf", n_threads: 4}
+    backend_category: llamacpp-cpu
+    quant: q4_k_m
+    license: Apache-2.0
+  qwen2.5-3b-q4:
+    engine: engines.llm.llama_cpp_engine:LlamaCppLLM
+    params: {repo_id: Qwen/Qwen2.5-3B-Instruct-GGUF, filename: "*q4_k_m.gguf", n_threads: 4}
+    backend_category: llamacpp-cpu
+    quant: q4_k_m
+    license: Qwen Research License
+  gemma-3-1b-q4:
+    engine: engines.llm.llama_cpp_engine:LlamaCppLLM
+    params: {repo_id: ggml-org/gemma-3-1b-it-GGUF, filename: "*Q4_K_M.gguf", n_threads: 4}
+    backend_category: llamacpp-cpu
+    quant: q4_k_m
+    license: Gemma Terms of Use
+  gemma-3-4b-q4:
+    engine: engines.llm.llama_cpp_engine:LlamaCppLLM
+    params: {repo_id: ggml-org/gemma-3-4b-it-GGUF, filename: "*Q4_K_M.gguf", n_threads: 4}
+    backend_category: llamacpp-cpu
+    quant: q4_k_m
+    license: Gemma Terms of Use
+  llama-3.2-3b-q4:
+    engine: engines.llm.llama_cpp_engine:LlamaCppLLM
+    params: {repo_id: bartowski/Llama-3.2-3B-Instruct-GGUF, filename: "*Q4_K_M.gguf", n_threads: 4}
+    backend_category: llamacpp-cpu
+    quant: q4_k_m
+    license: Llama 3.2 Community License
+  gemma-3-4b-q4-cuda:
+    engine: engines.llm.llama_cpp_engine:LlamaCppLLM
+    params: {repo_id: ggml-org/gemma-3-4b-it-GGUF, filename: "*Q4_K_M.gguf", n_gpu_layers: -1}
+    backend_category: llamacpp-cuda
+    quant: q4_k_m
+    license: Gemma Terms of Use

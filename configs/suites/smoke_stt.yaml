@@ -1,0 +1,9 @@
+# 冒煙測試：確認框架、資料、安裝都正常（幾分鐘內跑完）
+name: smoke_stt
+task: stt
+models: [whisper-tiny-ct2-int8, whisper-small-ct2-int8]
+languages: [en, ja]
+datasets: [fleurs]
+conditions: [clean]
+n_samples: 10
+warmup: 1

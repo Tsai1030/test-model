@@ -1,0 +1,18 @@
+# 語音對話機器人：STT → LLM → TTS 組合比較
+name: dialogue_quick
+task: dialogue
+combos:
+  - {stt: whisper-small-ct2-int8,          llm: qwen2.5-1.5b-q4, tts: kokoro-82m}
+  - {stt: whisper-small-ct2-int8,          llm: gemma-3-1b-q4,   tts: kokoro-82m}
+  - {stt: whisper-small-ct2-int8,          llm: gemma-3-4b-q4,   tts: kokoro-82m}
+  - {stt: whisper-small-ct2-int8,          llm: qwen2.5-3b-q4,   tts: kokoro-82m}
+  - {stt: whisper-small-ct2-int8,          llm: gemma-3-4b-q4,   tts: piper-medium}
+  - {stt: whisper-large-v3-turbo-ct2-int8, llm: gemma-3-4b-q4,   tts: kokoro-82m}
+languages: [en, es-ES, es-419, pt-BR, pt-PT, ja]
+n_samples: 6
+warmup: 1
+vad_endpoint_ms: 300
+max_tokens: 160
+temperature: 0.3
+synthesize_full: true
+question_tts: {default: kokoro-82m, pt-PT: piper-medium}

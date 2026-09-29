@@ -1,0 +1,3 @@
+# 後端比較用：transformers 版 Whisper（可裝在 core 環境）
+transformers
+accelerate

@@ -1,0 +1,5 @@
+# 獨立環境（.venv-tts-extra）：MeloTTS / XTTS-v2 / Chatterbox，彼此相依較重，建議分開或在 WSL2 / Colab 安裝
+# MeloTTS：pip install git+https://github.com/myshell-ai/MeloTTS.git && python -m unidic download
+-r base.txt
+coqui-tts
+chatterbox-tts

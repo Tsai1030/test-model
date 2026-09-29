@@ -1,0 +1,43 @@
+# 硬體 profile 與「開發機 → Jetson」速度換算係數。
+#
+# 換算定義：k = RTF_來源 / RTF_Jetson（k > 1 表示 Jetson 較快）
+#   Jetson 預估 RTF = 來源 RTF / k；延遲、TTFA 同樣除以 k；tokens/s 乘以 k
+#   準確度（WER/CER/MOS）不換算：與硬體無關，前提是量化方式相同
+#
+# 理論依據（source: theory，只是起點，必須用錨點模型校準）：
+#   - 記憶體頻寬：i3-10110U DDR4-2666 雙通道約 42.7 GB/s；Orin NX LPDDR5 102.4 GB/s → 約 2.4 倍
+#     自回歸解碼（Whisper decoder、LLM、自回歸 TTS）主要受頻寬限制
+#   - 算力：i3 CPU FP32 峰值約 0.25 TFLOPS；Orin NX GPU FP16 Tensor Core 高出一個數量級以上，
+#     但小模型、batch=1 時 GPU 利用率低，實際加速遠小於理論值
+#   - T4（Colab）→ Orin NX：頻寬 320 vs 102 GB/s，約慢 3 倍（k ≈ 0.33）
+#
+# 校準：python estimate_jetson.py --calibrate --source results/<pc_run> --target results/<jetson_run>
+#       會寫入 configs/calibration.yaml，並覆蓋這裡的理論值
+
+profiles:
+  pc:
+    desc: "Intel i3-10110U (2C/4T, AVX2), 16GB DDR4, Intel UHD (no CUDA)"
+    mem_bw_gbs: 42.7
+  colab-t4:
+    desc: "Google Colab NVIDIA T4 16GB (GPU proxy for GPU-only models)"
+    mem_bw_gbs: 320
+  jetson-orin-nx:
+    desc: "Jetson Orin NX 16GB, 1024-core Ampere + 32 Tensor Cores, 8x A78AE, 16GB shared LPDDR5"
+    mem_bw_gbs: 102.4
+    memory_note: "CPU 與 GPU 共用 16GB，系統約占 2-3GB"
+
+estimate:
+  target_profile: jetson-orin-nx-est
+  factors:
+    pc:
+      ct2-cpu:      {k: 4.0, jetson_backend: ct2-cuda,      source: theory}
+      torch-cpu:    {k: 5.0, jetson_backend: torch-cuda,    source: theory}
+      onnx-cpu:     {k: 2.5, jetson_backend: onnx-cuda,     source: theory}
+      nemo-cpu:     {k: 6.0, jetson_backend: nemo-cuda,     source: theory}
+      llamacpp-cpu: {k: 3.0, jetson_backend: llamacpp-cuda, source: theory}
+    colab-t4:
+      ct2-cuda:      {k: 0.33, jetson_backend: ct2-cuda,      source: theory}
+      torch-cuda:    {k: 0.33, jetson_backend: torch-cuda,    source: theory}
+      onnx-cuda:     {k: 0.33, jetson_backend: onnx-cuda,     source: theory}
+      nemo-cuda:     {k: 0.33, jetson_backend: nemo-cuda,     source: theory}
+      llamacpp-cuda: {k: 0.33, jetson_backend: llamacpp-cuda, source: theory}

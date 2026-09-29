@@ -1,0 +1,64 @@
+# 第一輪（P3 初篩）：開發機 .venv-core 能跑的全部候選 → 產生短名單
+# 在 i3-10110U 上全部約需 20 小時以上，分三晚跑（冒煙測試已於 2026-09-29 通過）：
+#   第一晚：python run_all.py --plan configs/plans/round1.yaml --skip-smoke --only tts dialogue stt_small
+#   第二晚：python run_all.py --plan configs/plans/round1.yaml --skip-smoke --only stt_mid
+#   第三晚：python run_all.py --plan configs/plans/round1.yaml --skip-smoke --only stt_large
+# 每晚的結果各自存成一個 run，report.py 會自動合併所有 run。
+#
+# es-ES / pt-PT 的 STT 需要 Common Voice（FLEURS 沒有這兩個變體）；壓縮檔需自行從
+# mozilladatacollective.com 下載 *Scripted Speech* 版本（不必解壓）。
+name: round1
+hw: pc
+
+prepare:                                              # manifest 已存在就略過
+  fleurs: {langs: [en, es-419, pt-BR, ja], n: 300}
+  # 篩選規則：
+  #   - 只用 test + dev（模型訓練時保留的資料；NeMo 等模型可能用過 CV 的 train）
+  #   - 依說話者自選的結構化口音欄位篩選（自由填寫欄位太雜，如「Porto」會混到巴西的 Porto Alegre）
+  #   - es-ES = 伊比利半島各區（北、中南、南、東）；排除加那利群島（口音較接近拉美）
+  #   - 在湊到 n 句的前提下讓說話者越多越好：西語資料多，每人最多 3 句；葡語只有 269 句 / 44 人，每人最多 10 句
+  commonvoice:
+    - lang: pt-PT
+      archive: D:/cv/pt/1789493619984-cv-corpus-27.0-2026-09-11-pt.tar.gz
+      match: ["Portuguese (Portugal)"]
+      max_per_speaker: 10
+    - lang: es-ES
+      archive: D:/cv/Spanish/1789502799842-cv-corpus-27.0-2026-09-11-es.tar.gz
+      match: [peninsular]
+      max_per_speaker: 3
+
+# 依序執行，每步完成都會更新報告。先跑短的，最久的 STT（含 large-v3）放最後。
+# smoke：冒煙測試時的縮小範圍（limit = 每組幾句，langs = 只測哪些語言）
+steps:
+  - name: tts
+    suite: configs/suites/tts_quick.yaml
+    models: [kokoro-82m, piper-medium]               # MeloTTS / XTTS-v2 / Chatterbox 需另建環境，這輪不跑
+    score: [--asr-judge, whisper-large-v3-turbo-ct2-int8, --utmos]
+    smoke: {limit: 1}
+
+  - name: dialogue
+    suite: configs/suites/dialogue_quick.yaml         # 6 個 STT + LLM + TTS 組合
+    # 不加 --asr-judge：對話總分只用回答品質 / 延遲 / 自然度；語音可懂度已在 TTS 測過。省約 3 小時
+    score: [--utmos]
+    smoke: {limit: 1, langs: [en]}
+
+  # STT 依速度分三組（冒煙測試實測 RTF：small ≈ 1、medium ≈ 4、turbo ≈ 5、large-v3 ≈ 5）
+  - name: stt_small                                   # 約 4 小時
+    suite: configs/suites/stt_quick.yaml
+    models:
+      - whisper-tiny-ct2-int8
+      - whisper-base-ct2-int8
+      - whisper-small-ct2-int8
+      - distil-large-v3-ct2-int8                      # 只支援 en
+      - kotoba-whisper-v2-ct2-int8                    # 只支援 ja
+    smoke: {limit: 2}
+
+  - name: stt_mid                                     # 約 15 小時（乾淨環境下可能 9–11 小時）
+    suite: configs/suites/stt_quick.yaml
+    models: [whisper-medium-ct2-int8, whisper-large-v3-turbo-ct2-int8]
+    smoke: {limit: 2}
+
+  - name: stt_large                                   # 約 8 小時（乾淨環境下可能 5–6 小時）
+    suite: configs/suites/stt_quick.yaml
+    models: [whisper-large-v3-ct2-int8]               # 準確度上限參考
+    smoke: {limit: 2}

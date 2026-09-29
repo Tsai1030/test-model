@@ -1,0 +1,13 @@
+name: smoke_dialogue
+task: dialogue
+combos:
+  - {stt: whisper-small-ct2-int8, llm: qwen2.5-1.5b-q4, tts: kokoro-82m}
+languages: [en, ja]
+n_samples: 2
+warmup: 1
+vad_endpoint_ms: 300        # VAD 判定說完話需要的靜音長度（加進回合延遲）
+max_tokens: 160
+temperature: 0.3
+synthesize_full: true
+# 問題沒有錄音時，用這個 TTS 合成問題音檔（標記為 synthetic；正式測試請改用真人錄音）
+question_tts: {default: kokoro-82m, pt-PT: piper-medium}

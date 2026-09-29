@@ -1,0 +1,6 @@
+{"id": "q01", "text": "¿A qué hora cierra hoy el museo?", "facts": [["17", "5", "cinco"]]}
+{"id": "q02", "text": "¿Cuánto cuesta la entrada para adultos?", "facts": [["12", "doce"]]}
+{"id": "q03", "text": "Perdona, ¿dónde están los aseos?", "facts": [["planta baja", "entrada"]]}
+{"id": "q04", "text": "¿Se pueden hacer fotos dentro?", "facts": [["flash"]]}
+{"id": "q05", "text": "¿Cuándo se construyó este edificio?", "facts": [["1885"]]}
+{"id": "q06", "text": "¿Hay algún sitio donde tomar un café?", "facts": [["terraza", "azotea", "última planta"]]}

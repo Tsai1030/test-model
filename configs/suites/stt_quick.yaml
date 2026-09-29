@@ -1,0 +1,18 @@
+# 初篩：全部候選、只測乾淨語音、每組 100 句 → 產生短名單
+name: stt_quick
+task: stt
+models:
+  - whisper-tiny-ct2-int8
+  - whisper-base-ct2-int8
+  - whisper-small-ct2-int8
+  - whisper-medium-ct2-int8
+  - whisper-large-v3-turbo-ct2-int8
+  - distil-large-v3-ct2-int8
+  - kotoba-whisper-v2-ct2-int8
+  # NeMo 需另一個環境（WSL2 / Colab）：python run.py --suite ... --models parakeet-tdt-0.6b-v3 canary-1b-v2
+languages: [en, es-ES, es-419, pt-BR, pt-PT, ja]
+datasets: [fleurs, commonvoice, tour]     # 不存在的 manifest 會自動略過
+conditions: [clean]
+lang_mode: given
+n_samples: 100
+warmup: 2

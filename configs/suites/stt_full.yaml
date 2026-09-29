@@ -1,0 +1,18 @@
+# 完整測試：只跑短名單（依 stt_quick 結果修改 models），含噪音、幻覺、速度重複測
+name: stt_full
+task: stt
+models:
+  - whisper-small-ct2-int8
+  - whisper-large-v3-turbo-ct2-int8
+  - kotoba-whisper-v2-ct2-int8
+languages: [en, es-ES, es-419, pt-BR, pt-PT, ja]
+datasets: [fleurs, commonvoice, tour, silence]   # silence = 靜音/純噪音，量幻覺率
+conditions: [clean, snr20, snr10, snr5]
+lang_mode: given
+n_samples: 300
+warmup: 2
+speed_repeats: 3          # 取 speed_items 句重複 3 次，速度用這些數據算 p50/p90
+speed_items: 10
+# 串流型引擎（supports_streaming）才會用到
+stream_chunks_ms: [160, 320, 640]
+stream_items: 20

@@ -1,0 +1,10 @@
+# 自動語言辨識（LID）：不告訴模型語言，量測 lid_acc 與自動模式下的 WER/CER
+name: stt_lid
+task: stt
+models: [whisper-small-ct2-int8, whisper-large-v3-turbo-ct2-int8]
+languages: [en, es-ES, es-419, pt-BR, pt-PT, ja]
+datasets: [fleurs, tour]
+conditions: [clean]
+lang_mode: auto
+n_samples: 100
+warmup: 2

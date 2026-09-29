@@ -1,0 +1,11 @@
+# 框架本身（每個環境都要裝）
+numpy
+pyyaml
+soundfile
+soxr
+psutil
+jiwer>=3.0
+pandas
+matplotlib
+huggingface_hub
+whisper-normalizer
