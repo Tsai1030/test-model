@@ -60,7 +60,12 @@ def load_all():
         frames.append(pd.read_csv(p))
     if not frames:
         raise SystemExit("找不到 results/*/summary.csv，請先執行 run.py 與 score.py")
-    return pd.concat(frames, ignore_index=True)
+    df = pd.concat(frames, ignore_index=True)
+    # 同一組合測過多次（例如修正後重跑）只採用最新一次；run_id 以時間開頭，估算列為 "est:<run_id>"
+    key = ["task", "model", "lang", "dataset", "condition", "hw_profile"]
+    df = (df.assign(_order=df.run_id.astype(str).str.removeprefix("est:"))
+            .sort_values("_order", kind="stable").drop_duplicates(key, keep="last"))
+    return df.drop(columns="_order").reset_index(drop=True)
 
 
 # ---------------------------------------------------------------- scoring
@@ -122,6 +127,9 @@ def score_rows(df, cfg):
             fails.append("error")
         if gates.get("commercial_only") and "non-commercial" in str(row.get("license", "")).lower():
             fails.append("license")
+        err = {"stt": row.get("err_rate"), "tts": row.get("asr_err")}.get(task)
+        if gates.get("max_err_rate") is not None and num(err) is not None and num(err) > gates["max_err_rate"]:
+            fails.append("accuracy")
         if str(row["hw_profile"]).startswith("jetson") and task in ("stt", "tts"):
             rtf = num(row.get("rtf_p50"))
             if rtf is not None and rtf > gates["jetson_rtf_max"]:
@@ -161,11 +169,12 @@ def section_stt(g):
     rows = []
     for i, (_, r) in enumerate(rank(g).iterrows(), 1):
         ci = f"{fmt(r.err_ci95_low, 'pct')}–{fmt(r.err_ci95_high, 'pct')}"
+        metric = r.err_metric.upper() if isinstance(r.err_metric, str) else ""
         rows.append([i, r.model, r.dataset, fmt(r.score), r.gate,
-                     f"{fmt(r.err_rate, 'pct')} ({ci})", fmt(r.noisy_err_rate, "pct"),
+                     f"{fmt(r.err_rate, 'pct')} {metric}".strip(), ci, fmt(r.noisy_err_rate, "pct"),
                      fmt(r.hallucination_rate, "pct"), fmt(r.rtf_p50), fmt(r.latency_ms_p50, "int"),
                      fmt(r.mem_mb, "int"), r.license])
-    return md_table(["#", "模型", "資料集", "總分", "門檻", "WER/CER (95% CI)", "噪音 WER/CER",
+    return md_table(["#", "模型", "資料集", "總分", "門檻", "錯誤率", "95% 信賴區間", "噪音錯誤率",
                      "幻覺率", "RTF p50", "延遲 ms p50", "記憶體 MB", "授權"], rows)
 
 
@@ -202,7 +211,8 @@ def recommendations(scored, priority):
     for lang in L.ALL:
         cells = [lang]
         for task in ("stt", "tts", "dialogue"):
-            pick = "–"
+            has_data = ((scored.task == task) & (scored.lang == lang)).any()
+            pick = "無模型通過門檻" if has_data else "–"
             for hw in priority:
                 g = scored[(scored.task == task) & (scored.lang == lang) & (scored.hw_profile == hw)
                            & (scored.gate == "PASS")]
@@ -224,6 +234,7 @@ def pareto_charts(scored, out_dir):
     except ImportError:
         return []
     plt.rcParams["font.sans-serif"] = ["Microsoft JhengHei", "Noto Sans CJK TC", "DejaVu Sans"]
+    plt.rcParams["axes.unicode_minus"] = False      # 中文字型沒有 U+2212 負號，改用 ASCII "-"
     specs = {
         "stt": ("rtf_p50", "err_rate", "RTF p50（越左越快）", "WER / CER（越低越準）", True),
         "tts": ("ttfa_ms_p50", "utmos", "TTFA ms p50（越左越快）", "UTMOS（越高越自然）", False),
@@ -304,6 +315,9 @@ def main():
         if t.empty:
             continue
         md += ["", f"## {title}"]
+        if task == "stt":
+            md += ["", "> 錯誤率：日語為 CER（字錯誤率），其他語言為 WER（詞錯誤率）。"
+                       "噪音錯誤率與幻覺率只有 stt_full 套件會測，未測時顯示「–」。"]
         for lang in [l for l in L.ALL if l in set(t.lang)]:
             md += ["", f"### {lang} · {L.LANGS[lang]['name']}"]
             for hw in hw_order:
@@ -317,6 +331,10 @@ def main():
     if charts:
         md += ["", "## 圖表"] + [f"![{c}]({c})" for c in charts]
     md += ["", "## 權重與門檻", "```yaml", yaml.safe_dump(cfg, allow_unicode=True, sort_keys=False).strip(), "```"]
+    # 人工撰寫的解讀放在 docs/analysis/（git 追蹤），每次產生報告都附在最後，重跑不會遺失
+    notes = sorted((ROOT / "docs" / "analysis").glob("*.md"))
+    if notes:
+        md += ["", "## 分析與解讀"] + [s for n in notes for s in ("", n.read_text(encoding="utf-8").strip())]
     (out_dir / "report.md").write_text("\n".join(md) + "\n", encoding="utf-8")
     print(f"wrote {out_dir / 'report.md'}, combined.csv, {len(charts)} charts")
 

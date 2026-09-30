@@ -6,6 +6,8 @@
 另外會產生（已存在則不覆寫，方便填入人工分數後重新評分）：
   listening_test.csv   TTS 聽測表：填 mos_1to5（1–5 分）→ 重跑 score.py 會併入 mos 欄位
   rating_sheet.csv     對話評分表：填 relevance_1to5 / naturalness_1to5 / dialect_ok(y/n)
+以及每次都重新產生的：
+  listen.html          試聽頁（TTS / 對話）：同一句並排比較各模型的語音，用瀏覽器開啟
 """
 import argparse
 import json
@@ -317,6 +319,11 @@ def main():
     df.to_csv(run_dir / "summary.csv", index=False, encoding="utf-8-sig")
     export_sheets(run_dir, per_key_items)
     print(f"wrote {run_dir / 'summary.csv'} ({len(df)} rows)")
+    if any(task in ("tts", "dialogue") for task, _, _ in per_key_items):
+        from listen_page import build
+        page = build(run_dir)
+        if page:
+            print(f"wrote {page}（試聽頁，用瀏覽器開啟）")
 
 
 if __name__ == "__main__":

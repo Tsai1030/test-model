@@ -18,6 +18,12 @@ class LlamaCppLLM(LLMEngine):
             n_threads=self.n_threads, n_gpu_layers=self.n_gpu_layers, verbose=False,
         )
 
+    def close(self):
+        # 明確釋放模型記憶體（GGUF 權重可達數 GB）
+        if getattr(self, "llm", None) is not None:
+            self.llm.close()
+            self.llm = None
+
     def chat_stream(self, messages, max_tokens=160, temperature=0.3):
         stream = self.llm.create_chat_completion(
             messages=messages, max_tokens=max_tokens, temperature=temperature, stream=True,

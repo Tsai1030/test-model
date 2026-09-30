@@ -7,6 +7,8 @@ target_hw_priority: [jetson-orin-nx, jetson-orin-nx-est, pc]
 gates:
   commercial_only: false          # PoC：不排除非商用授權（報告仍列出授權）
   jetson_rtf_max: 0.5             # 只套用在 jetson* 硬體 profile
+  max_err_rate: 0.30              # STT 的 WER/CER、TTS 的 ASR 回測錯誤率超過就淘汰；
+                                  # 否則全部模型準確度都 0 分時，排名只剩速度在比，會推薦「最快但聽不懂」的模型
   memory_budget_mb:               # 模型占用記憶體上限（Jetson 16GB 共用）
     stt: 2048
     tts: 2048

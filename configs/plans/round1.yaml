@@ -1,9 +1,11 @@
 # 第一輪（P3 初篩）：開發機 .venv-core 能跑的全部候選 → 產生短名單
-# 在 i3-10110U 上全部約需 20 小時以上，分三晚跑（冒煙測試已於 2026-09-29 通過）：
-#   第一晚：python run_all.py --plan configs/plans/round1.yaml --skip-smoke --only tts dialogue stt_small
-#   第二晚：python run_all.py --plan configs/plans/round1.yaml --skip-smoke --only stt_mid
-#   第三晚：python run_all.py --plan configs/plans/round1.yaml --skip-smoke --only stt_large
-# 每晚的結果各自存成一個 run，report.py 會自動合併所有 run。
+# 在 i3-10110U 上分三晚跑（冒煙測試已於 2026-09-29 通過；變更紀錄見 CHANGELOG.md）：
+#   第一晚（已完成）：python run_all.py --plan configs/plans/round1.yaml --skip-smoke --only tts dialogue stt_small
+#   第二晚（約 10–10.5 小時）：
+#     python run_all.py --plan configs/plans/round1.yaml --skip-smoke --only dialogue stt_small_ptpt stt_mid
+#   第三晚（約 4 小時）：python run_all.py --plan configs/plans/round1.yaml --skip-smoke --only stt_large
+# 每晚的結果各自存成一個 run，report.py 會自動合併；同一個「模型 × 語言 × 資料集 × 條件 × 硬體」
+# 測過多次時只採用最新一次（例如第二晚重跑的對話、重測的 pt-PT 會取代第一晚的結果）。
 #
 # es-ES / pt-PT 的 STT 需要 Common Voice（FLEURS 沒有這兩個變體）；壓縮檔需自行從
 # mozilladatacollective.com 下載 *Scripted Speech* 版本（不必解壓）。
@@ -17,18 +19,23 @@ prepare:                                              # manifest 已存在就略
   #   - 依說話者自選的結構化口音欄位篩選（自由填寫欄位太雜，如「Porto」會混到巴西的 Porto Alegre）
   #   - es-ES = 伊比利半島各區（北、中南、南、東）；排除加那利群島（口音較接近拉美）
   #   - 在湊到 n 句的前提下讓說話者越多越好：西語資料多，每人最多 3 句；葡語只有 269 句 / 44 人，每人最多 10 句
+  #   - 排除純詞表型提示句（逗號 ≥ 3 且無句末標點，如化學、醫學術語清單）：導覽情境不會出現。
+  #     pt-PT 的 190 句中有 18 句屬此類；es-ES 0 句（含列舉的一般句子有句號結尾，不受影響）。2026-09-30 加入
   commonvoice:
     - lang: pt-PT
       archive: D:/cv/pt/1789493619984-cv-corpus-27.0-2026-09-11-pt.tar.gz
       match: ["Portuguese (Portugal)"]
       max_per_speaker: 10
+      exclude_word_lists: true
     - lang: es-ES
       archive: D:/cv/Spanish/1789502799842-cv-corpus-27.0-2026-09-11-es.tar.gz
       match: [peninsular]
       max_per_speaker: 3
+      exclude_word_lists: true
 
-# 依序執行，每步完成都會更新報告。先跑短的，最久的 STT（含 large-v3）放最後。
-# smoke：冒煙測試時的縮小範圍（limit = 每組幾句，langs = 只測哪些語言）
+# 依序執行，每步完成都會更新報告。
+# limit：每個「模型 × 語言」測幾句（不設則用套件的 n_samples，stt_quick 為 100）；langs：只測哪些語言
+# smoke：冒煙測試時的縮小範圍
 steps:
   - name: tts
     suite: configs/suites/tts_quick.yaml
@@ -36,14 +43,14 @@ steps:
     score: [--asr-judge, whisper-large-v3-turbo-ct2-int8, --utmos]
     smoke: {limit: 1}
 
-  - name: dialogue
+  - name: dialogue                                    # 約 3–3.5 小時（第二晚重跑：修正記憶體累積後）
     suite: configs/suites/dialogue_quick.yaml         # 6 個 STT + LLM + TTS 組合
     # 不加 --asr-judge：對話總分只用回答品質 / 延遲 / 自然度；語音可懂度已在 TTS 測過。省約 3 小時
     score: [--utmos]
     smoke: {limit: 1, langs: [en]}
 
-  # STT 依速度分三組（冒煙測試實測 RTF：small ≈ 1、medium ≈ 4、turbo ≈ 5、large-v3 ≈ 5）
-  - name: stt_small                                   # 約 4 小時
+  # STT 依速度分組（第一晚乾淨環境實測 RTF：small ≈ 0.5–1.3；冒煙測試 × 0.89 推估：medium ≈ 3.5、turbo ≈ 4.5、large-v3 ≈ 4.7）
+  - name: stt_small                                   # 3h13m（第一晚）
     suite: configs/suites/stt_quick.yaml
     models:
       - whisper-tiny-ct2-int8
@@ -53,12 +60,22 @@ steps:
       - kotoba-whisper-v2-ct2-int8                    # 只支援 ja
     smoke: {limit: 2}
 
-  - name: stt_mid                                     # 約 15 小時（乾淨環境下可能 9–11 小時）
+  - name: stt_small_ptpt                              # 約 20 分鐘：pt-PT 資料排除詞表後，小模型重測以便與大模型比較
     suite: configs/suites/stt_quick.yaml
-    models: [whisper-medium-ct2-int8, whisper-large-v3-turbo-ct2-int8]
+    models: [whisper-tiny-ct2-int8, whisper-base-ct2-int8, whisper-small-ct2-int8]
+    langs: [pt-PT]
     smoke: {limit: 2}
 
-  - name: stt_large                                   # 約 8 小時（乾淨環境下可能 5–6 小時）
+  # 大模型每語言 50 句（方案 B）：主要回答「大模型是否明顯比 small 準」，差距預期夠大，50 句看得出來；
+  # 且大模型在 Jetson 上會用 GPU，這台 CPU 的速度參考價值有限
+  - name: stt_mid                                     # 約 6.7 小時
     suite: configs/suites/stt_quick.yaml
-    models: [whisper-large-v3-ct2-int8]               # 準確度上限參考
+    models: [whisper-medium-ct2-int8, whisper-large-v3-turbo-ct2-int8]
+    limit: 50
+    smoke: {limit: 2}
+
+  - name: stt_large                                   # 約 4 小時
+    suite: configs/suites/stt_quick.yaml
+    models: [whisper-large-v3-ct2-int8]               # 準確度上限參考（記憶體約 3.3 GB，超過 STT 預算 2 GB，非部署候選）
+    limit: 50
     smoke: {limit: 2}

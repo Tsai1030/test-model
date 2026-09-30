@@ -137,7 +137,8 @@ def prepare_data(plan, log, dry):
         log(f"== 準備資料：Common Voice {cv['lang']}")
         run_cmd([PY, "data/prepare_commonvoice.py", "--cv", cv["archive"], "--lang", cv["lang"],
                  "--split", *cv.get("split", ["test", "dev"]), "--match", *cv["match"],
-                 "--n", cv.get("n", 300), "--max-per-speaker", cv.get("max_per_speaker", 10)], log, dry)
+                 "--n", cv.get("n", 300), "--max-per-speaker", cv.get("max_per_speaker", 10),
+                 *(["--exclude-word-lists"] if cv.get("exclude_word_lists") else [])], log, dry)
 
 
 def banner(log, text):
@@ -177,7 +178,7 @@ def main():
             for step in steps:
                 sm = step.get("smoke") or {}
                 code, alerts = run_step(step, f"_smoke/{stamp}_{step['name']}", hw, sm.get("limit", 2),
-                                        args.langs or sm.get("langs"), log, args.dry_run)
+                                        args.langs or sm.get("langs") or step.get("langs"), log, args.dry_run)
                 if code or alerts:
                     failed.append((step["name"], code, alerts))
             if failed:
@@ -199,7 +200,9 @@ def main():
             run_id = f"{stamp}_{plan['name']}_{step['name']}_{hw}"
             banner(log, f"[{i}/{len(steps)}] {step['name']}  →  results/{run_id}")
             t = time.time()
-            code, alerts = run_step(step, run_id, hw, None, args.langs, log, args.dry_run)
+            # step 可自訂 limit（每組句數）與 langs；命令列 --langs 優先
+            code, alerts = run_step(step, run_id, hw, step.get("limit"), args.langs or step.get("langs"),
+                                    log, args.dry_run)
             done.append((step["name"], run_id, code, alerts, time.time() - t))
             # 每步都更新報告：中途中斷也有目前為止的結果
             run_cmd([PY, "estimate_jetson.py"], log, args.dry_run)

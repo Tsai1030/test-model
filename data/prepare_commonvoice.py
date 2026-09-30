@@ -15,6 +15,7 @@ import collections
 import csv
 import io
 import json
+import re
 import sys
 import tarfile
 from pathlib import Path
@@ -27,6 +28,12 @@ from bench.audio import STT_SR, load_audio, save_wav  # noqa: E402
 TSV_CACHE = ROOT / "data" / "cache" / "commonvoice"
 
 csv.field_size_limit(10 ** 7)
+
+
+def is_word_list(text: str) -> bool:
+    """純詞表：逗號分隔的名詞清單、沒有句末標點，如 "haloalcano, fluoroalcano, cloroalcano, ..."。
+    Common Voice 葡語含大量這類專業術語提示句，導覽情境不會出現；含列舉的一般句子（有句號結尾）不受影響。"""
+    return text.count(",") >= 3 and not re.search(r"[.?!…]\s*$", text)
 
 
 def parse_tsv(text):
@@ -86,6 +93,7 @@ def main():
     ap.add_argument("--n", type=int, default=300)
     ap.add_argument("--max-per-speaker", type=int, default=10,
                     help="每位說話者最多取幾句，避免少數人的錄音占掉大部分測試資料")
+    ap.add_argument("--exclude-word-lists", action="store_true", help="排除純詞表型提示句（見 is_word_list）")
     ap.add_argument("--list-variants", action="store_true")
     args = ap.parse_args()
 
@@ -111,6 +119,10 @@ def main():
         keys = [m.lower() for m in args.match]
         rows = [r for r in rows
                 if any(k in (r.get("variant") or "").lower() or k in (r.get("accents") or "").lower() for k in keys)]
+    if args.exclude_word_lists:
+        before = len(rows)
+        rows = [r for r in rows if not is_word_list(r["sentence"])]
+        print(f"excluded {before - len(rows)} word-list prompts")
     per_speaker, picked = collections.Counter(), []
     for r in rows:
         if per_speaker[r.get("client_id")] < args.max_per_speaker:

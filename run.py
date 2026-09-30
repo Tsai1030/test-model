@@ -271,10 +271,17 @@ class EngineCache:
             raise RuntimeError(f"{kind} model {model_id} failed to load (see raw/{model_id}.model.json)")
         return self.sessions[key].engine
 
-    def close(self):
-        for sess in self.sessions.values():
+    def keep_only(self, keys):
+        """釋放 keys 以外的模型。組合之間若不釋放，模型會累積到記憶體不足、系統改用分頁檔，
+        越後面的組合越慢（實測 Kokoro 慢到 16 倍），延遲數據就失真。"""
+        for key in [k for k in self.sessions if k not in keys]:
+            sess = self.sessions.pop(key)
             if not sess.failed:
                 sess.__exit__(None, None, None)
+        gc.collect()
+
+    def close(self):
+        self.keep_only(set())
 
 
 def run_dialogue(suite, models, out, args):
@@ -284,6 +291,8 @@ def run_dialogue(suite, models, out, args):
     try:
         for combo in suite["combos"]:
             name = f"{combo['stt']}+{combo['llm']}+{combo['tts']}"
+            stt = llm = tts = None      # 先放掉上一組的引用，keep_only 才真的釋放得掉
+            cache.keep_only({(k, combo[k]) for k in ("stt", "llm", "tts")})
             try:
                 stt = cache.get("stt", combo["stt"])
                 llm = cache.get("llm", combo["llm"])

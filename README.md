@@ -84,6 +84,10 @@ python report.py
 
 ## 4. 人工評分（MOS／對話品質）
 
+**試聽頁**：`score.py` 評分完會在 run 資料夾產生 `listen.html`（TTS、對話測試），用瀏覽器開啟即可並排比較各模型的語音：
+TTS 每列一句文字、附 Whisper 評審聽到的文字；對話每列一個問題、附 STT 聽到的內容、回答文字與事實是否答對。
+手動重新產生：`python listen_page.py results\<run_id>`（或 `--all`）。
+
 `score.py` 會在 run 資料夾產生兩個評分表（已存在就不覆寫）：
 - `listening_test.csv`：TTS 聽測，順序已打亂。請母語者填 `mos_1to5`（1–5 分）
 - `rating_sheet.csv`：對話評分。填 `relevance_1to5`、`naturalness_1to5`、`dialect_ok`
