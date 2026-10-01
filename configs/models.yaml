@@ -4,9 +4,12 @@
 #   langs:             STT 支援的語言（本專案語言碼）；TTS 以 voices 的 key 決定支援哪些語言
 #   backend_category:  換算 Jetson 速度時使用的類別（見 configs/hardware.yaml）
 #   license:           授權（PoC 階段不設限，但報告會列出）
+#   streaming:         串流能力（選填，報告顯示用）：native（原生串流）| chunked（有條件／分段模擬）|
+#                      offline（整句處理）| sentence（TTS 逐句輸出）。未填時依引擎推定
+#   specialized:       語言專用模型填語言碼（如 ja）；未填 = 多語模型。用於「專用 vs 多語」比較
 #
-# 尚未寫轉接器的候選（之後加入）：SenseVoice-Small、ReazonSpeech、sherpa-onnx 串流 zipformer、
-# Vosk、Moonshine、CosyVoice 2/3、Style-BERT-VITS2、Fish-Speech、F5-TTS、Parler-TTS
+# 尚未寫轉接器的候選：sherpa-onnx 串流 zipformer、Vosk、CosyVoice 2/3、Style-BERT-VITS2、Fish-Speech、F5-TTS、
+# Parler-TTS、Qwen3-TTS（需 GPU）。Parakeet-Redux 已寫轉接器，但 Windows 版 kestrel 沒有 AVX2 核心，需 Linux / Jetson
 
 all_langs: &all_langs [en, es-ES, es-419, pt-BR, pt-PT, ja]
 eu_langs: &eu_langs [en, es-ES, es-419, pt-BR, pt-PT]
@@ -92,6 +95,94 @@ stt:
     backend_category: nemo-cpu
     license: CC-BY-4.0
 
+  # ---- 第三晚（2026-10-01 調查）：排行榜上的小型多語模型
+  qwen3-asr-0.6b:                          # LLM 式 ASR；CPU 用 fp32（約 3.8 GB），GPU 用 bf16 約減半
+    engine: engines.stt.qwen3_asr_engine:Qwen3ASR
+    params: {model: Qwen/Qwen3-ASR-0.6B-hf, device: cpu, dtype: float32, num_threads: 4}
+    langs: *all_langs
+    backend_category: torch-cpu
+    license: Apache-2.0
+    streaming: chunked                     # 只有 vLLM（GPU）後端支援串流
+  nemotron-3.5-asr-0.6b:                   # 整句模式；以 locale 提示語言，可區分 pt-PT / pt-BR
+    engine: engines.stt.nemotron_engine:NemotronASR
+    params: {model: nvidia/nemotron-3.5-asr-streaming-0.6b, device: cpu, dtype: float32, num_threads: 4}
+    langs: *all_langs
+    backend_category: torch-cpu
+    license: OpenMDW-1.1
+    streaming: native
+  nemotron-3.5-asr-0.6b-stream560:         # 串流模式：區塊 560 ms（lookahead 6）
+    engine: engines.stt.nemotron_engine:NemotronASR
+    params: {model: nvidia/nemotron-3.5-asr-streaming-0.6b, device: cpu, dtype: float32, num_threads: 4,
+             streaming: true, lookahead_tokens: 6}
+    langs: *all_langs
+    backend_category: torch-cpu
+    license: OpenMDW-1.1
+    streaming: native
+  parakeet-tdt-0.6b-v3-int8:               # 25 種歐洲語言，自動判斷語言（不接受語言參數）
+    engine: engines.stt.onnx_asr_engine:OnnxAsrSTT
+    params: {model: nemo-parakeet-tdt-0.6b-v3, quantization: int8}
+    langs: *eu_langs
+    backend_category: onnx-cpu
+    license: CC-BY-4.0
+    streaming: chunked
+  sensevoice-small-int8:                   # 支援 zh / en / ja / ko / yue
+    engine: engines.stt.sherpa_onnx_engine:SherpaOfflineSTT
+    # 用 2024-07-17 原版：2025-09-09 int8 版不論語言設定都判斷成粵語（<|yue|>），日語輸出成簡體中文
+    params: {kind: sense_voice, repo_id: csukuangfj/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17}
+    langs: [en, ja]
+    backend_category: onnx-cpu
+    license: FunASR model license
+    streaming: offline
+  parakeet-redux:                          # 1.58-bit Parakeet v3（178 MB）；Windows 版 kestrel 無 AVX2 核心，需 Linux / Jetson
+    engine: engines.stt.photon_engine:PhotonSTT
+    params: {model: moondream/parakeet-redux, device: cpu}
+    langs: *eu_langs
+    backend_category: onnx-cpu
+    license: CC-BY-4.0
+    streaming: offline
+
+  # ---- 第三晚：語言專用模型
+  parakeet-tdt_ctc-0.6b-ja-int8:           # ReazonSpeech 35,000 小時日語訓練
+    engine: engines.stt.sherpa_onnx_engine:SherpaOfflineSTT
+    params: {kind: nemo_ctc, repo_id: csukuangfj/sherpa-onnx-nemo-parakeet-tdt_ctc-0.6b-ja-35000-int8}
+    langs: [ja]
+    backend_category: onnx-cpu
+    license: CC-BY-4.0
+    streaming: offline
+    specialized: ja
+  moonshine-tiny-ja:                       # 27M 參數
+    engine: engines.stt.hf_seq_engine:HFSeqSTT
+    params: {model: UsefulSensors/moonshine-tiny-ja, kind: moonshine, tokens_per_second: 13, num_threads: 4}
+    langs: [ja]
+    backend_category: torch-cpu
+    license: Moonshine Community License
+    streaming: offline
+    specialized: ja
+  parakeet-v3-ptbr-tagarela:               # Parakeet v3 以巴西 podcast 語料微調；只有 fp32（約 2.4 GB）
+    engine: engines.stt.onnx_asr_engine:OnnxAsrSTT
+    params: {model: nemo-conformer-tdt, repo_id: alefiury/parakeet-tdt-0.6b-v3-ptBR-TAGARELA-onnx}
+    langs: [pt-BR, pt-PT]
+    backend_category: onnx-cpu
+    license: CC-BY-4.0
+    streaming: chunked
+    specialized: pt
+  parakeet-tdt-0.6b-v2-int8:
+    engine: engines.stt.onnx_asr_engine:OnnxAsrSTT
+    params: {model: nemo-parakeet-tdt-0.6b-v2, quantization: int8}
+    langs: [en]
+    backend_category: onnx-cpu
+    license: CC-BY-4.0
+    streaming: chunked
+    specialized: en
+  granite-speech-5.0-470m-ctc:             # 非自回歸 CTC
+    engine: engines.stt.hf_seq_engine:HFSeqSTT
+    params: {model: ibm-granite/granite-speech-5.0-470m-turboctc, kind: ctc, num_threads: 4}
+    langs: [en]
+    backend_category: torch-cpu
+    license: Apache-2.0
+    streaming: offline
+    specialized: en
+
   # ---- Jetson 版本（device: cuda）：在 Jetson 上實測時使用
   whisper-small-ct2-fp16-cuda:
     engine: engines.stt.faster_whisper_engine:FasterWhisperSTT
@@ -143,6 +234,13 @@ tts:
              pt-BR: Ana Florence, pt-PT: Ana Florence, ja: Ana Florence}
     backend_category: torch-cpu
     license: CPML (non-commercial)
+  supertonic-3:                            # 約 1 億參數，ONNX；31 種語言共用 10 種預設聲音（M1–M5、F1–F5）
+    engine: engines.tts.supertonic_engine:SupertonicTTS
+    params: {model: supertonic-3}
+    voices: {en: F1, es-ES: F1, es-419: F1, pt-BR: F1, pt-PT: F1, ja: F1}   # 不區分方言
+    backend_category: onnx-cpu
+    license: OpenRAIL-M
+    streaming: sentence
   chatterbox-mtl:
     engine: engines.tts.chatterbox_engine:ChatterboxMultilingualTTS
     params: {device: cpu}

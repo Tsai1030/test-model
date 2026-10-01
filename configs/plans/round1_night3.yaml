@@ -1,0 +1,36 @@
+# 第一輪・第三晚：排行榜新模型（小型多語、語言專用 STT 與小型 TTS）。候選與篩選理由見 docs/roadmap.md。
+#   python run_all.py --plan configs/plans/round1_night3.yaml --smoke-only      # 冒煙測試（同時下載約 10 GB 模型）
+#   python run_all.py --plan configs/plans/round1_night3.yaml --skip-smoke      # 正式測試
+# 所有 STT 與第一、二晚使用相同資料（每語言前 100 句），可直接比較；report.py 會自動合併所有 run。
+name: round1_night3
+hw: pc
+
+steps:
+  - name: stt_multi                                   # 小型多語 STT
+    suite: configs/suites/stt_quick.yaml
+    models:
+      - parakeet-tdt-0.6b-v3-int8                     # en、es、pt
+      - sensevoice-small-int8                         # en、ja
+      - nemotron-3.5-asr-0.6b                         # 全部 6 種（整句模式）
+      - qwen3-asr-0.6b                                # 全部 6 種；LLM 式，CPU 上最慢，放最後
+    smoke: {limit: 2}
+
+  - name: stt_specialized                             # 語言專用 STT
+    suite: configs/suites/stt_quick.yaml
+    models:
+      - parakeet-tdt_ctc-0.6b-ja-int8                 # ja
+      - moonshine-tiny-ja                             # ja
+      - parakeet-tdt-0.6b-v2-int8                     # en
+      - granite-speech-5.0-470m-ctc                   # en
+      - parakeet-v3-ptbr-tagarela                     # pt-BR、pt-PT
+    smoke: {limit: 2}
+
+  - name: stt_stream                                  # Nemotron 串流模式（區塊 560 ms），每語言 20 句
+    suite: configs/suites/stt_stream.yaml
+    smoke: {limit: 1, langs: [en]}
+
+  - name: tts_new
+    suite: configs/suites/tts_quick.yaml
+    models: [supertonic-3]
+    score: [--asr-judge, whisper-large-v3-turbo-ct2-int8, --utmos]
+    smoke: {limit: 1}

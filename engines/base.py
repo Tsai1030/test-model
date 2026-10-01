@@ -18,6 +18,9 @@ class STTResult:
 
 class STTEngine:
     supports_streaming = False
+    # True：transcribe() 收到本專案完整語言碼（如 pt-PT、es-419）而非基本語言碼（pt、es），
+    # 給能區分方言的模型使用（如 Nemotron 的 locale 提示）
+    wants_locale = False
 
     def __init__(self, **params):
         self.params = params

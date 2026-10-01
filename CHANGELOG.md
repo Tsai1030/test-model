@@ -5,6 +5,42 @@
 
 ---
 
+## 2026-10-01（第二晚結束後，第三晚準備）
+
+### ⚠️ 影響結果：放寬對話延遲的評分刻度
+- **改了什麼**：`configs/scoring.yaml` 的 `turn_latency_ms` 由 `[800, 3000]` 改為 `[1000, 10000]`（1 秒 = 100 分、10 秒 = 0 分）。
+- **為什麼**：Jetson 換算下所有對話組合的回合延遲都超過 3 秒，延遲分數全為 0，排名只剩回答品質在比，報告因此推薦延遲 10–15 秒的 turbo 組合。放寬後延遲能分出高下；Jetson 實測後再收緊（計畫目標 1.5 秒）。
+- **影響**：只影響對話總分與排名，不影響任何量測值。
+
+### ⚠️ 影響結果：數字寫法統一（es / pt / ja）
+- **改了什麼**：`metrics/normalize.py` 在計算錯誤率前統一數字寫法：
+  - es / pt：數字文字轉阿拉伯數字（`text2num`），例如 dezenove → 19、mil novecentos e oitenta e cinco → 1985
+  - ja：漢字數字〇一…九轉阿拉伯數字（二つ → 2つ；十、百等複合寫法不處理）
+  - en 維持 Whisper 官方 EnglishTextNormalizer（原本就會處理數字）
+- **為什麼**：第三晚冒煙測試發現 Nemotron 把「19」寫成「dezenove」而被算成錯誤。不同模型對數字的寫法不同（Whisper 多寫數字，Nemotron、Parakeet-ja 等多寫文字或漢字），不統一會讓寫法不同的模型被不公平地多算錯誤；一個「1985」寫成文字會被算成好幾個錯。TTS 也受影響：導覽文本部分數字寫成文字（如 quarenta e cinco），評審 Whisper 常寫成「45」，被誤判成唸錯。
+- **影響**：重新評分第一、二晚所有 run（STT、TTS、對話）；TTS 沿用已存的評審轉錄（`score.py` 新增快取機制，`--rejudge` 可強制重跑）。修正前的評分保留為各 run 的 `summary.before_numnorm.csv`。
+
+### SenseVoice 改用 2024-07-17 版
+- 2025-09-09 int8 版不論語言設定都把語言判斷成粵語（`<|yue|>`），日語輸出成簡體中文、英語全大寫。2024-07-17 原版（int8）正常。
+
+### 新增第三晚的模型與轉接器
+- **新套件**（`.venv-core`，只新增、未更動既有套件）：`onnx-asr[cpu,hub]`、`sherpa-onnx`、`moondream`（Photon）、`supertonic`、`librosa`（Nemotron 的特徵擷取器需要；冒煙測試時發現缺少）。已補進 `requirements/core.txt`。
+- **新轉接器**：
+  - `engines/stt/onnx_asr_engine.py`：Parakeet v2 / v3（int8）、Parakeet v3 巴西葡語微調版
+  - `engines/stt/sherpa_onnx_engine.py`：SenseVoice-Small、Parakeet-ja（int8）
+  - `engines/stt/nemotron_engine.py`：Nemotron-3.5-ASR-Streaming，整句與**原生串流**兩種模式（transformers 官方串流用法）
+  - `engines/stt/qwen3_asr_engine.py`：Qwen3-ASR-0.6B
+  - `engines/stt/hf_seq_engine.py`：Granite-Speech-5.0-470M（CTC）、Moonshine-tiny-ja
+  - `engines/stt/photon_engine.py`：Parakeet-Redux。**Windows 版 kestrel 的 CPU 擴充模組沒有 AVX2 / VNNI 核心，三值權重無法在本機執行**，改到 Linux / Jetson 階段測
+  - `engines/tts/supertonic_engine.py`：Supertonic-3
+- **方言代碼**：`STTEngine.wants_locale`，能區分方言的模型（Nemotron）收到完整語言碼（如 pt-PT、es-419），其餘仍收到基本碼（pt、es）。
+- **串流評測**：新增 `configs/suites/stt_stream.yaml`；`score.py` 新增 `stream_err_rate`（串流模式的錯誤率）；報告的 STT、TTS 表格新增「串流」欄（`models.yaml` 的 `streaming` 欄位）。
+- **`models.yaml`**：新增 `streaming`（native / chunked / offline / sentence）與 `specialized`（語言專用模型的語言碼）欄位。
+- **執行計畫**：`configs/plans/round1_night3.yaml`。
+- **注意**：Parakeet v3 巴西葡語版只有 fp32（約 2.4 GB），與 int8 的 Parakeet v3 比較時精度不同；Qwen3-ASR 在 CPU 上用 fp32（約 3.8 GB），GPU 上用 bf16 約減半。
+
+---
+
 ## 2026-09-30（第一晚結果檢討後，第二晚開始前）
 
 ### ⚠️ 影響結果：pt-PT 測試資料排除詞表型句子
@@ -36,6 +72,10 @@
 - **為什麼**：以第一晚乾淨環境的實測速度重估，大模型在本機比預期慢（乾淨環境只比冒煙測試快約 11%），維持 100 句需再 4 個晚上。大模型主要是回答「是否明顯比 small 準」，差距預期夠大，50 句看得出來；且大模型在 Jetson 上會用 GPU，這台 CPU 的速度參考價值有限。
 - **影響**：大模型的錯誤率信賴區間較寬。前 50 句是小模型 100 句的子集，分析時另列 small 在相同 50 句上的錯誤率，確保同基準比較。
 
+### 取消第三晚的 Whisper large-v3，改測小型與語言專用 STT 模型
+- **改了什麼**：`configs/plans/round1.yaml` 的 `stt_large` 步驟註解停用。
+- **為什麼**：large-v3 記憶體約 3.3 GB，超過 STT 預算 2 GB，本來就不是部署候選；且使用者表示評測以小模型為主。第三晚改測排行榜上的其他小型多語模型與各語言專用模型，最後量化比較「專用模型」與「多語模型」。候選清單見 `docs/roadmap.md`。
+
 ### 新增試聽頁 `listen.html`
 - **改了什麼**：新增 `listen_page.py`；`score.py` 評分完自動在 run 資料夾產生 `listen.html`。
 - **內容**：TTS — 每列一句導覽文本，並排各模型的合成語音，附 Whisper 評審聽到的文字（可看出哪些字被判定唸錯）；對話 — 每列一個問題（含問題語音），並排各組合的回答語音，附 STT 聽到的內容、回答文字、事實是否答對。
@@ -44,7 +84,7 @@
 ### 報告格式
 - STT 表格將「錯誤率」與「95% 信賴區間」拆成兩欄，並標示 WER / CER；加註「噪音錯誤率、幻覺率只有 stt_full 會測」。
 - 報告最後自動附上 `docs/analysis/*.md` 的人工解讀（重新產生報告不會遺失）。
-- 圖表負號改用 ASCII，修正中文字型缺字。
+- 圖表負號改用 ASCII；STT Pareto 圖的對數刻度改顯示一般數字（0.1、1、10），不再使用 10⁻¹ 科學記號。原本數學字型的負號（U+2212）中文字型沒有，每次產生報告都會出現「Font 'default' does not have a glyph for '−'」警告，圖上負號也可能顯示成方框。
 
 ---
 

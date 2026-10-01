@@ -90,6 +90,8 @@
 
 #### 下一步
 
+完整的待辦清單與穩健性測試（噪音錯誤率、幻覺率）的步驟見 `docs/roadmap.md`。
+
 1. **第二、三晚**：Whisper medium、large-v3-turbo、large-v3，以及修正後重跑對話測試。
 2. **人工評分**：`listening_test.csv`（TTS，請母語者填 1–5 分）、`rating_sheet.csv`（對話的相關度、自然度、方言是否正確），填完後重新評分。
 3. **下一輪候選**：pt-PT 的其他 TTS（Chatterbox、XTTS-v2，需 GPU）、Llama-3.2-3B、擴充對話題目（每語言 6 題過少）。

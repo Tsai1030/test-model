@@ -3,7 +3,8 @@
 #   第一晚（已完成）：python run_all.py --plan configs/plans/round1.yaml --skip-smoke --only tts dialogue stt_small
 #   第二晚（約 10–10.5 小時）：
 #     python run_all.py --plan configs/plans/round1.yaml --skip-smoke --only dialogue stt_small_ptpt stt_mid
-#   第三晚（約 4 小時）：python run_all.py --plan configs/plans/round1.yaml --skip-smoke --only stt_large
+#   第三晚：原訂 stt_large（large-v3）已取消（2026-09-30）：超出 STT 記憶體預算，且評測以小模型為主；
+#           改測其他小型與語言專用 STT 模型（另立 plan）
 # 每晚的結果各自存成一個 run，report.py 會自動合併；同一個「模型 × 語言 × 資料集 × 條件 × 硬體」
 # 測過多次時只採用最新一次（例如第二晚重跑的對話、重測的 pt-PT 會取代第一晚的結果）。
 #
@@ -74,8 +75,10 @@ steps:
     limit: 50
     smoke: {limit: 2}
 
-  - name: stt_large                                   # 約 4 小時
-    suite: configs/suites/stt_quick.yaml
-    models: [whisper-large-v3-ct2-int8]               # 準確度上限參考（記憶體約 3.3 GB，超過 STT 預算 2 GB，非部署候選）
-    limit: 50
-    smoke: {limit: 2}
+  # 已取消（2026-09-30）：large-v3 記憶體約 3.3 GB，超過 STT 預算 2 GB，非部署候選；評測改以小模型為主。
+  # 若日後仍需準確度上限參考，可取消註解後以 --only stt_large 執行（約 4 小時）
+  # - name: stt_large
+  #   suite: configs/suites/stt_quick.yaml
+  #   models: [whisper-large-v3-ct2-int8]
+  #   limit: 50
+  #   smoke: {limit: 2}

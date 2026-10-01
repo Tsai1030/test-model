@@ -21,7 +21,8 @@ scales:
   ttfa_ms: [200, 1500]
   mos: [4.5, 2.5]                 # 人工 MOS 優先，沒有時用 UTMOS
   mem_mb: [500, 4096]
-  turn_latency_ms: [800, 3000]
+  turn_latency_ms: [1000, 10000]  # 2026-10-01 由 [800, 3000] 放寬：Jetson 換算下所有組合都 > 3 秒，延遲分數全為 0，
+                                  # 排名只剩回答品質。Jetson 實測後再收緊（計畫目標 1.5 秒）
   ratio: [1.0, 0.0]               # fact_recall、lang_ok_rate 等 0–1 比例
 
 weights:

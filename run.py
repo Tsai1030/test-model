@@ -124,7 +124,7 @@ def run_stt(suite, models, out, args):
                 if lang not in spec.get("langs", L.ALL):
                     print(f"  skip {lang}: not supported by {model_id}")
                     continue
-                lang_arg = L.base(lang) if lang_mode == "given" else None
+                lang_arg = (lang if engine.wants_locale else L.base(lang)) if lang_mode == "given" else None
                 for dataset in suite["datasets"]:
                     for cond in suite.get("conditions", ["clean"]):
                         mpath = manifest_path(lang, dataset, cond)
@@ -313,7 +313,7 @@ def run_dialogue(suite, models, out, args):
                 def turn(q, save_prefix=None):
                     audio, synthetic = question_audio(q, lang, suite["question_tts"], cache)
                     t = now()
-                    res = stt.transcribe(audio, L.base(lang))
+                    res = stt.transcribe(audio, lang if stt.wants_locale else L.base(lang))
                     t_stt = now() - t
 
                     messages = [{"role": "system", "content": sys_msg}, {"role": "user", "content": res.text}]

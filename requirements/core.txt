@@ -23,3 +23,10 @@ pyopenjtalk-plus
 piper-tts
 llama-cpp-python
 pykakasi
+# 第三晚新增（2026-10-01）：排行榜新模型的執行環境
+transformers>=5.16      # Qwen3-ASR（≥5.13）、Nemotron-3.5（≥5.13）、Granite-Speech-5.0（≥5.16）
+onnx-asr[cpu,hub]       # Parakeet v2 / v3（ONNX，不需 NeMo）
+sherpa-onnx             # SenseVoice、Parakeet-ja
+moondream>=2.4.1        # Parakeet-Redux（Photon）；Windows 版缺 AVX2 核心，本機無法執行
+supertonic              # Supertonic-3 TTS
+librosa                 # Nemotron 的特徵擷取器需要

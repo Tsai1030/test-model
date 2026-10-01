@@ -15,6 +15,22 @@ from bench import languages as L
 ROOT = Path(__file__).resolve().parent
 PASS_COLOR, FAIL_COLOR, INK, MUTED, GRID = "#2a78d6", "#898781", "#0b0b0b", "#52514e", "#e8e7e3"
 
+# 串流能力：models.yaml 的 streaming 欄位；未填時依引擎推定
+STREAM_LABELS = {"native": "原生串流", "chunked": "有條件", "offline": "整句", "sentence": "逐句"}
+ENGINE_STREAMING = {"faster_whisper_engine": "offline", "hf_engine": "offline", "nemo_engine": "chunked",
+                    "kokoro_engine": "sentence", "piper_engine": "sentence", "melo_engine": "sentence",
+                    "xtts_engine": "sentence", "chatterbox_engine": "sentence"}
+MODELS = {}
+
+
+def stream_label(task, model_id, row):
+    spec = MODELS.get(task, {}).get(model_id, {})
+    kind = spec.get("streaming") or ENGINE_STREAMING.get(spec.get("engine", ":").split(":")[0].rsplit(".", 1)[-1])
+    label = STREAM_LABELS.get(kind, "–")
+    if num(row.get("stream_final_ms_p50")) is not None:
+        label += f"（首段 {fmt(row.get('first_partial_ms_p50'), 'int')} / 說完後 {fmt(row.get('stream_final_ms_p50'), 'int')} ms）"
+    return label
+
 
 def load_yaml(path):
     with open(path, encoding="utf-8") as f:
@@ -173,9 +189,9 @@ def section_stt(g):
         rows.append([i, r.model, r.dataset, fmt(r.score), r.gate,
                      f"{fmt(r.err_rate, 'pct')} {metric}".strip(), ci, fmt(r.noisy_err_rate, "pct"),
                      fmt(r.hallucination_rate, "pct"), fmt(r.rtf_p50), fmt(r.latency_ms_p50, "int"),
-                     fmt(r.mem_mb, "int"), r.license])
+                     stream_label("stt", r.model, r), fmt(r.mem_mb, "int"), r.license])
     return md_table(["#", "模型", "資料集", "總分", "門檻", "錯誤率", "95% 信賴區間", "噪音錯誤率",
-                     "幻覺率", "RTF p50", "延遲 ms p50", "記憶體 MB", "授權"], rows)
+                     "幻覺率", "RTF p50", "延遲 ms p50", "串流", "記憶體 MB", "授權"], rows)
 
 
 def section_tts(g):
@@ -185,9 +201,9 @@ def section_tts(g):
         src = r.naturalness_src if isinstance(r.naturalness_src, str) else "–"
         rows.append([i, r.model, fmt(r.score), r.gate, f"{fmt(nat)} ({src})",
                      fmt(r.asr_err, "pct"), fmt(r.ttfa_ms_p50, "int"), fmt(r.rtf_p50),
-                     fmt(r.mem_mb, "int"), r.license])
+                     stream_label("tts", r.model, r), fmt(r.mem_mb, "int"), r.license])
     return md_table(["#", "模型", "總分", "門檻", "自然度", "ASR 回測錯誤率", "TTFA ms p50",
-                     "RTF p50", "記憶體 MB", "授權"], rows)
+                     "RTF p50", "串流", "記憶體 MB", "授權"], rows)
 
 
 def section_dialogue(g):
@@ -231,6 +247,7 @@ def pareto_charts(scored, out_dir):
         import matplotlib
         matplotlib.use("Agg")
         import matplotlib.pyplot as plt
+        from matplotlib.ticker import FuncFormatter, NullFormatter
     except ImportError:
         return []
     plt.rcParams["font.sans-serif"] = ["Microsoft JhengHei", "Noto Sans CJK TC", "DejaVu Sans"]
@@ -264,6 +281,9 @@ def pareto_charts(scored, out_dir):
                 ax.set_ylabel(ylabel, color=MUTED, fontsize=9)
                 if task == "stt":
                     ax.set_xscale("log")
+                    # 對數刻度預設標成 10^-1（數學字型的負號 U+2212 中文字型沒有，會一直警告）；改顯示 0.1、1
+                    ax.xaxis.set_major_formatter(FuncFormatter(lambda v, _: f"{v:g}"))
+                    ax.xaxis.set_minor_formatter(NullFormatter())
                 ax.grid(color=GRID, linewidth=0.8)
                 ax.tick_params(colors=MUTED, labelsize=8)
                 for side in ("top", "right"):
@@ -292,6 +312,7 @@ def main():
     out_dir.mkdir(parents=True, exist_ok=True)
 
     cfg = load_yaml(ROOT / "configs" / "scoring.yaml")
+    MODELS.update(load_yaml(ROOT / "configs" / "models.yaml"))
     df = load_all()
     scored = score_rows(df, cfg)
     scored.to_csv(out_dir / "combined.csv", index=False, encoding="utf-8-sig")

@@ -34,7 +34,7 @@ SUMMARY_COLUMNS = [
     "hallucination_rate", "lid_acc",
     # 速度
     "rtf_p50", "rtf_p90", "latency_ms_p50", "latency_ms_p90", "ttfa_ms_p50", "ttfa_ms_p90",
-    "first_partial_ms_p50", "stream_final_ms_p50",
+    "first_partial_ms_p50", "stream_final_ms_p50", "stream_err_rate",
     # TTS 品質
     "asr_err", "utmos", "mos", "mos_n",
     # 對話
@@ -124,6 +124,12 @@ def score_stt(items, meta, args):
         sel = [s for s in stream if s["chunk_ms"] == smallest]
         r["first_partial_ms_p50"] = pct([s["first_partial_s"] for s in sel], 50, 1000)
         r["stream_final_ms_p50"] = pct([s["final_latency_s"] for s in sel], 50, 1000)
+        # 串流模式的辨識結果也算錯誤率：串流看不到後文，準確度可能比整句低
+        refs = {it["id"]: it["ref"] for it in speech}
+        pairs = [utt_errors(refs[s["id"]], s["hyp"], lang, args.ja_kana) for s in sel if s["id"] in refs]
+        if pairs:
+            s_errs, s_ns = zip(*pairs)
+            r["stream_err_rate"] = round(corpus_rate(s_errs, s_ns), 4)
     return r
 
 
@@ -152,12 +158,12 @@ class Judges:
 def intelligibility_and_mos(items, lang, run_dir, judges, text_field):
     r = {}
     with_wav = [it for it in items if it.get("wav")]
-    if judges.asr and with_wav:
+    if judges.args.asr_judge and with_wav:
         errs, ns = [], []
         for it in with_wav:
-            hyp = judges.asr.transcribe(load_audio(run_dir / it["wav"]), L.base(lang)).text
-            it["asr_judge_hyp"] = hyp
-            e, n = utt_errors(it[text_field], hyp, lang)
+            if "asr_judge_hyp" not in it:      # 沒有快取（raw/*.judge.jsonl）才呼叫評審模型
+                it["asr_judge_hyp"] = judges.asr.transcribe(load_audio(run_dir / it["wav"]), L.base(lang)).text
+            e, n = utt_errors(it[text_field], it["asr_judge_hyp"], lang)
             errs.append(e)
             ns.append(n)
         r["asr_err"] = round(corpus_rate(errs, ns), 4)
@@ -261,6 +267,7 @@ def main():
     ap.add_argument("--asr-judge", help="TTS 可懂度用的 STT 模型 id（建議最準的，如 whisper-large-v3-ct2-int8）")
     ap.add_argument("--utmos", action="store_true", help="計算 UTMOS 預測 MOS（需 torch）")
     ap.add_argument("--ja-kana", action="store_true", help="日語 CER 前先轉平假名")
+    ap.add_argument("--rejudge", action="store_true", help="忽略已存的評審轉錄（raw/*.judge.jsonl），重新跑 ASR 評審")
     args = ap.parse_args()
 
     run_dir = Path(args.run_dir)
@@ -275,6 +282,13 @@ def main():
         key = meta_path.name[: -len(".meta.json")]
         items = read_jsonl(raw / f"{key}.jsonl")
         task = meta["task"]
+        judge_cache = raw / f"{key}.judge.jsonl"
+        if args.asr_judge and not args.rejudge and judge_cache.exists():
+            # 重新評分（如修改正規化規則）時沿用已存的評審轉錄，不必再跑一次 Whisper
+            cached = {r["id"]: r.get("asr_judge_hyp") for r in read_jsonl(judge_cache)}
+            for it in items:
+                if cached.get(it["id"]) is not None:
+                    it["asr_judge_hyp"] = cached[it["id"]]
         row = {
             "run_id": run["run_id"], "task": task, "model": meta["model"], "lang": meta["lang"],
             "dataset": meta["dataset"], "condition": meta["condition"], "hw_profile": run["hw_profile"],
@@ -299,7 +313,7 @@ def main():
             row["peak_ram_mb"] = max((r["peak_ram_mb"] or 0) for r in res) or None
             row["load_time_s"] = sum((r["load_time_s"] or 0) for r in res)
             row.update(score_dialogue(items, meta, run_dir, judges))
-        if judges.asr and task in ("tts", "dialogue"):
+        if args.asr_judge and task in ("tts", "dialogue"):
             (raw / f"{key}.judge.jsonl").write_text(
                 "\n".join(json.dumps(it, ensure_ascii=False) for it in items), encoding="utf-8")
         rows.append(row)

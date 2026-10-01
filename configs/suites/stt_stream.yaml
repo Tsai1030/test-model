@@ -1,0 +1,13 @@
+# 串流 STT：依真實時間節奏逐段餵音訊（bench/streaming_sim.py），量「首個部分結果延遲」與「說完話到最終結果」。
+# 只對 supports_streaming 的模型有效。每個模型會先整句跑 n_samples 句，再以串流模式跑前 stream_items 句。
+name: stt_stream
+task: stt
+models: [nemotron-3.5-asr-0.6b-stream560]
+languages: [en, es-ES, es-419, pt-BR, pt-PT, ja]
+datasets: [fleurs, commonvoice]
+conditions: [clean]
+lang_mode: given
+n_samples: 20
+warmup: 1
+stream_chunks_ms: [80]        # 餵音訊的粒度（模擬麥克風每 80 ms 送一次）；模型實際的區塊大小由 lookahead_tokens 決定
+stream_items: 20
