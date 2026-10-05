@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>多語語音模型評測：結論報告</title>
+<style>
+  :root {
+    --surface: #fcfcfb; --page: #f6f6f3; --card: #ffffff;
+    --ink: #0b0b0b; --ink2: #52514e; --muted: #898781; --line: #e1e0d9; --axis: #c3c2b7;
+    --accent: #2a78d6; --accent-soft: #e8f1fc;
+    --good: #0ca30c; --good-text: #006300; --warn: #fab219; --critical: #d03b3b;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--page); color: var(--ink);
+         font: 15px/1.65 system-ui, "Segoe UI", "Microsoft JhengHei", "Noto Sans CJK TC", sans-serif; }
+  main { max-width: 1040px; margin: 0 auto; padding: 40px 16px 72px; }
+  main, p, li, td, footer { overflow-wrap: anywhere; }   /* 長路徑、模型名不撐寬頁面 */
+  header { margin-bottom: 28px; }
+  h1 { font-size: 28px; line-height: 1.3; margin: 0 0 10px; letter-spacing: 0.01em; }
+  .meta { color: var(--ink2); font-size: 14px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .chip { font-size: 12.5px; color: var(--ink2); background: var(--card); border: 1px solid var(--line);
+          border-radius: 999px; padding: 2px 10px; }
+  h2 { font-size: 20px; margin: 44px 0 14px; padding-top: 4px; }
+  h2 .num { color: var(--muted); font-weight: 600; margin-right: 8px; }
+  h3 { font-size: 15.5px; margin: 22px 0 8px; }
+  p { margin: 8px 0; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 20px 22px; }
+  .lead { font-size: 17px; font-weight: 600; margin: 0 0 14px; }
+  .tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin: 18px 0 6px; }
+  .tile { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; }
+  .tile .label { font-size: 13px; color: var(--ink2); }
+  .tile .value { font-size: 30px; font-weight: 700; line-height: 1.2; margin: 6px 0 2px; }
+  .tile .ctx { font-size: 12.5px; color: var(--muted); }
+  .tile .value .from { font-size: 18px; color: var(--muted); font-weight: 600; text-decoration: line-through; }
+  ol.findings { margin: 6px 0 0; padding-left: 22px; }
+  ol.findings li { margin: 6px 0; }
+  figure { margin: 18px 0; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px; }
+  figure img { display: block; width: 100%; height: auto; }
+  figcaption { color: var(--ink2); font-size: 13.5px; margin-top: 8px; }
+  ul.takeaways { margin: 8px 0; padding-left: 20px; }
+  ul.takeaways li { margin: 5px 0; }
+  .table-wrap { overflow-x: auto; margin: 12px 0; border: 1px solid var(--line); border-radius: 12px; background: var(--card); }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; }
+  th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: 12.5px; color: var(--ink2); font-weight: 600; background: var(--surface); white-space: nowrap; }
+  tr:last-child td { border-bottom: 0; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .rec { font-weight: 700; }
+  .sub { display: block; color: var(--muted); font-size: 12.5px; }
+  .badge { display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; font-weight: 600; white-space: nowrap; }
+  .badge::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+  .b-good { color: var(--good-text); } .b-good::before { background: var(--good); }
+  .b-warn { color: #8a5a00; } .b-warn::before { background: var(--warn); }
+  .b-bad { color: var(--critical); }
+  .b-neutral { color: var(--muted); }
+  .note { font-size: 12.5px; color: var(--muted); margin-top: 6px; }
+  .callout { border-left: 3px solid var(--accent); background: var(--accent-soft); border-radius: 0 10px 10px 0;
+             padding: 12px 16px; margin: 14px 0; }
+  .callout b { color: var(--ink); }
+  footer { margin-top: 48px; color: var(--muted); font-size: 12.5px; border-top: 1px solid var(--line); padding-top: 14px; }
+  code { font-family: ui-monospace, Consolas, monospace; font-size: 12.5px; background: var(--surface);
+         border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; }
+  @media (max-width: 760px) {
+    .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    h1 { font-size: 23px; }
+  }
+  @media print {
+    body { background: #fff; }
+    main { padding: 0; }
+    figure, .tile, .table-wrap, .card { break-inside: avoid; }
+    h2 { break-after: avoid; }
+  }
+</style>
+</head>
+<body>
+<main>
+
+<header>
+  <h1>多語語音模型評測：結論報告</h1>
+  <div class="meta">2026-10-05　·　目標裝置：NVIDIA Jetson Orin NX 16GB　·　範圍：STT（語音辨識）、TTS（語音合成）、語音對話（STT → LLM → TTS）</div>
+  <div class="chips">
+    <span class="chip">en 英語</span><span class="chip">es-ES 西班牙西語</span><span class="chip">es-419 拉美西語</span>
+    <span class="chip">pt-BR 巴西葡語</span><span class="chip">pt-PT 葡萄牙葡語</span><span class="chip">ja 日語</span>
+  </div>
+</header>
+
+<section>
+  <div class="card">
+    <p class="lead">結論：6 種語言都已找到準確度達標的小型模型，但對話延遲仍未達標，需 Jetson 實測確認。</p>
+    <div class="tiles">
+      <div class="tile">
+        <div class="label">STT 達標語言</div>
+        <div class="value">6 / 6</div>
+        <div class="ctx">錯誤率 3.5%–12.8%<br>皆低於 30% 門檻</div>
+      </div>
+      <div class="tile">
+        <div class="label">pt-PT 錯誤率</div>
+        <div class="value"><span class="from">36.2%</span> 12.8%</div>
+        <div class="ctx">Whisper small → 葡語微調 Parakeet</div>
+      </div>
+      <div class="tile">
+        <div class="label">TTS 模型數</div>
+        <div class="value">1 個</div>
+        <div class="ctx">Supertonic-3 涵蓋全部 6 種語言</div>
+      </div>
+      <div class="tile">
+        <div class="label">對話回合延遲（Jetson 換算）</div>
+        <div class="value">3.5 秒</div>
+        <div class="ctx">目標 1.5 秒<br>新組合推估 1.9–2.7 秒</div>
+      </div>
+    </div>
+    <ol class="findings">
+      <li><b>STT 以 NVIDIA Parakeet 系列為主力</b>：西語、巴西葡語用 Parakeet-TDT-0.6B-v3（錯誤率 3.5–4.6%），比基準 Whisper small 顯著更準、快 2–4 倍。</li>
+      <li><b>pt-PT 已解決</b>：葡語微調版 Parakeet 錯誤率 12.8%（Whisper small 為 36.2%，不合格），且速度快。</li>
+      <li><b>日語用 SenseVoice-Small</b>：錯誤率 6.8%（Whisper small 11.0%），記憶體僅約 0.3 GB。</li>
+      <li><b>TTS 可用單一模型 Supertonic-3</b>：唯一支援全部 6 種語言，自然度在 5 種語言排名第一，記憶體最小（約 0.5 GB）。</li>
+      <li><b>語言專用模型只在 pt-PT 有顯著優勢</b>（−11.0 個百分點）；其他語言多語模型就足夠。</li>
+      <li><b>對話延遲是最大缺口</b>：目前最佳組合約 3.5 秒，換上新的 STT / TTS 後推估約 1.9–2.7 秒，仍需 Jetson 實測與進一步優化。</li>
+    </ol>
+    <div class="callout"><b>需要的支援：</b>Jetson Orin NX 實機（驗證速度），以及各語言母語者（聽測口音與自然度，特別是 pt-PT 與西語）。</div>
+  </div>
+</section>
+
+<section>
+  <h2><span class="num">1</span>評測範圍與方法</h2>
+  <div class="table-wrap"><table>
+    <tr><th>項目</th><th>內容</th></tr>
+    <tr><td>測試量</td><td>STT 16 個模型、TTS 3 個、LLM 4 個（6 個對話組合），共 3 晚、約 21 小時</td></tr>
+    <tr><td>STT 資料</td><td>每語言 100 句：FLEURS（en、es-419、pt-BR、ja）、Common Voice 27.0（es-ES：伊比利半島口音；pt-PT：葡萄牙口音，已排除專業術語清單）。所有模型在<b>相同句子</b>上比較</td></tr>
+    <tr><td>TTS / 對話資料</td><td>自寫導覽文本每語言 10 句；導覽問答每語言 6 題</td></tr>
+    <tr><td>準確度</td><td>STT：WER（日語 CER）＋ 95% 信賴區間，差距以配對 bootstrap 檢定。TTS：UTMOS（預測自然度 1–5）、Whisper 回測錯誤率。已統一數字寫法（例：dezenove = 19）</td></tr>
+    <tr><td>速度</td><td>開發機（Intel i3-10110U，無 GPU）實測，以理論係數換算 Jetson（<b>未經實機校準，僅供排序</b>）</td></tr>
+    <tr><td>門檻</td><td>錯誤率 ≤ 30%、STT / TTS 記憶體各 ≤ 2 GB、Jetson RTF ≤ 0.5、對話回合延遲目標 1.5 秒</td></tr>
+  </table></div>
+</section>
+
+<section>
+  <h2><span class="num">2</span>STT（語音辨識）</h2>
+  <figure>
+    <img src="fig1_stt_error_heatmap.png" alt="圖 1：各模型在 6 種語言的 STT 錯誤率熱圖">
+    <figcaption>顏色越淺越準；★ 為該語言錯誤率最低者。large-v3-turbo 每語言只測 50 句，其餘 100 句。</figcaption>
+  </figure>
+  <figure>
+    <img src="fig2_stt_accuracy_vs_speed.png" alt="圖 2：各語言 STT 錯誤率與每句處理時間的散佈圖">
+    <figcaption>越靠左下越好。藍色為推薦模型、橘色為基準 Whisper small。各小圖縱軸刻度不同。</figcaption>
+  </figure>
+  <ul class="takeaways">
+    <li><b>Whisper large-v3-turbo 最準但太慢</b>：es-419、ja 錯誤率最低，但 Jetson 換算每句約 8–9 秒，不適合即時對話。</li>
+    <li><b>Parakeet-v3 是西語、巴西葡語的最佳平衡點</b>：準確度接近 turbo，每句約 0.3–0.8 秒（Whisper small 約 1.3–1.5 秒）。英語（8.3%）較弱，英語另用 Granite-Speech-470M（5.4%）。</li>
+    <li><b>pt-PT 只有葡語微調的 Parakeet 兼顧準確度與速度</b>：12.8%、每句約 0.35 秒。</li>
+    <li><b>日語 SenseVoice（6.8%）與 Parakeet-ja（6.9%）並列</b>，SenseVoice 記憶體小得多（0.3 GB vs 1.1 GB）。</li>
+    <li><b>不建議</b>：Whisper tiny / base（錯誤率過高）、medium（記憶體 2.4 GB 超出預算）、Nemotron-3.5（英語、日語、pt-PT 都比 Whisper small 差）。</li>
+  </ul>
+</section>
+
+<section>
+  <h2><span class="num">3</span>語言專用 vs 多語模型</h2>
+  <figure>
+    <img src="fig3_specialized_vs_multilingual.png" alt="圖 3：語言專用模型與最佳多語模型的錯誤率差距及 95% 信賴區間">
+    <figcaption>點為錯誤率差距（專用 − 多語），線段為 95% 信賴區間；線段不跨過 0 才代表差距顯著。</figcaption>
+  </figure>
+  <div class="table-wrap"><table>
+    <tr><th>語言</th><th>專用模型</th><th>最佳多語模型</th><th class="num">差距（百分點）</th><th>95% 信賴區間</th><th>結論</th></tr>
+    <tr><td>en</td><td>Granite 5.4%</td><td>Qwen3-ASR 4.9%</td><td class="num">+0.6</td><td>−0.3 ～ +1.4</td><td><span class="badge b-neutral">不顯著</span></td></tr>
+    <tr><td>pt-BR</td><td>Parakeet 葡語 4.6%</td><td>Parakeet-v3 4.6%</td><td class="num">0.0</td><td>−0.9 ～ +1.0</td><td><span class="badge b-neutral">不顯著</span></td></tr>
+    <tr><td><b>pt-PT</b></td><td><b>Parakeet 葡語 12.8%</b></td><td>Qwen3-ASR 23.7%</td><td class="num"><b>−11.0</b></td><td>−15.7 ～ −6.8</td><td><span class="badge b-good">專用顯著較好</span></td></tr>
+    <tr><td>ja</td><td>Parakeet-ja 6.9%</td><td>SenseVoice 6.8%</td><td class="num">+0.1</td><td>−1.8 ～ +2.3</td><td><span class="badge b-neutral">不顯著</span></td></tr>
+  </table></div>
+  <p><b>結論</b>：只有 pt-PT 值得採用專用（葡語）模型；其他語言用多語模型即可，部署較簡單。英語採用 Granite 的理由是<b>速度</b>（每句 0.4 秒 vs Qwen3-ASR 2.2 秒），而非準確度。</p>
+</section>
+
+<section>
+  <h2><span class="num">4</span>TTS（語音合成）</h2>
+  <figure>
+    <img src="fig4_tts_quality_speed.png" alt="圖 4：三個 TTS 模型在各語言的自然度與首段延遲">
+    <figcaption>左：自然度（UTMOS，越高越好）；右：首段聲音延遲（越低越好）。兩張圖各自刻度。</figcaption>
+  </figure>
+  <div class="table-wrap"><table>
+    <tr><th>模型</th><th>支援語言</th><th>自然度（UTMOS）</th><th>回測錯誤率</th><th>首段延遲（Jetson 換算）</th><th>記憶體</th></tr>
+    <tr><td class="rec">Supertonic-3</td><td><b>全部 6 種</b></td><td>3.94–4.49，<b>5 種語言第一</b></td><td>1.3–5.1%</td><td>約 0.9–1.1 秒</td><td><b>約 0.5 GB</b></td></tr>
+    <tr><td>Kokoro-82M</td><td>無 pt-PT</td><td>3.48–4.50</td><td>0.0–2.1%</td><td>約 1.0–1.7 秒</td><td>約 1.5 GB</td></tr>
+    <tr><td>Piper</td><td>無 ja</td><td>2.52–4.39</td><td>0.7–12.4%</td><td><b>約 0.2–0.3 秒</b></td><td>約 0.8 GB</td></tr>
+  </table></div>
+  <ul class="takeaways">
+    <li><b>Supertonic-3 可作為單一通用 TTS</b>：唯一支援全部語言、最自然、最省記憶體。尚待母語者確認 pt-PT 是否為葡萄牙口音、西語方言，以及西語回測錯誤率（約 4–5%）偏高的原因。</li>
+    <li><b>Piper 是速度備案</b>：首段延遲最短，但 es-ES、pt-PT 自然度低。</li>
+  </ul>
+</section>
+
+<section>
+  <h2><span class="num">5</span>語音對話（端到端延遲）</h2>
+  <figure>
+    <img src="fig5_dialogue_latency.png" alt="圖 5：6 個對話組合的回合延遲拆解與 1.5 秒目標">
+    <figcaption>使用者說完到聽到回答的時間，拆成判斷說完、STT、LLM 第一句、TTS 首段。Jetson 理論換算，各語言平均。</figcaption>
+  </figure>
+  <ul class="takeaways">
+    <li><b>所有組合都未達 1.5 秒目標</b>：最佳約 3.5 秒。主要延遲來自 STT（Whisper small 約 1.2–1.7 秒）與 TTS（Kokoro 約 1.1–1.5 秒）。</li>
+    <li><b>換上新的 STT / TTS 後的推估</b>（元件相加，未實測）：判斷說完（0.3 秒）＋ Parakeet / SenseVoice（約 0.3–0.8 秒）＋ Qwen2.5-1.5B 第一句（約 0.8 秒）＋ Supertonic（約 1.0 秒）≈ <b>2.7 秒</b>；若 TTS 改用 Piper ≈ <b>1.9 秒</b>。</li>
+    <li><b>LLM</b>：Qwen2.5-1.5B 最快（第一句約 0.8 秒），Gemma-3-4B 回答最準但最慢；<b>Gemma-3-1B 淘汰</b>（事實正確率 50–67%，且會用錯語言回答）。每語言僅 6 題，回答品質結論仍屬初步。</li>
+    <li>要達到 1.5 秒，還需搭配：LLM 與 TTS 並行（邊生成邊合成）、串流 STT、常見問答預錄等做法。</li>
+  </ul>
+</section>
+
+<section>
+  <h2><span class="num">6</span>風險與限制</h2>
+  <div class="table-wrap"><table>
+    <tr><th>項目</th><th>影響</th><th>對策</th></tr>
+    <tr><td><b>速度為理論換算</b></td><td>Jetson 實際速度可能差很多，推薦可能改變</td><td>Jetson 實機校準（最優先）</td></tr>
+    <tr><td>自然度靠 UTMOS</td><td>UTMOS 以英語資料訓練，非英語僅供相對比較</td><td>母語者聽測（已備有試聽頁與評分表）</td></tr>
+    <tr><td>方言口音未確認</td><td>Supertonic、Kokoro 不區分 pt-PT / pt-BR、es-ES / es-419</td><td>母語者聽測</td></tr>
+    <tr><td>葡語微調 Parakeet 只有 fp32</td><td>記憶體約 3.1 GB，超出 STT 預算</td><td>量化成 int8（預估約 1 GB）並驗證準確度</td></tr>
+    <tr><td>開發機記憶體偏高</td><td>Qwen3-ASR、Nemotron、Granite 在 CPU 以 fp32 執行，Jetson 以 fp16 約減半</td><td>Jetson 實測</td></tr>
+    <tr><td>未測噪音與幻覺</td><td>導覽現場有人聲干擾</td><td>短名單做噪音（SNR 10 dB）與靜音幻覺測試</td></tr>
+    <tr><td>對話題目少、問題為 TTS 合成</td><td>回答品質、STT 表現可能偏樂觀</td><td>擴充題目、改用真人錄音</td></tr>
+    <tr><td>授權</td><td>皆可用於 PoC；SenseVoice（FunASR 模型授權）、Supertonic（OpenRAIL-M，含使用限制）商用前需法務確認</td><td>商用前確認</td></tr>
+  </table></div>
+</section>
+
+<section>
+  <h2><span class="num">7</span>下一步</h2>
+  <ol class="findings">
+    <li><b>Jetson 實機測試</b>：Parakeet、SenseVoice、Granite、Supertonic、Piper 的實際速度；校準換算係數。</li>
+    <li><b>母語者聽測</b>：Supertonic 的 pt-PT 口音與西語方言。</li>
+    <li><b>葡語微調 Parakeet 量化成 int8</b>，確認準確度不變。</li>
+    <li><b>用新組合重跑對話測試</b>（Parakeet / SenseVoice ＋ Qwen2.5-1.5B ＋ Supertonic / Piper），並實作 LLM 與 TTS 並行。</li>
+    <li><b>穩健性測試</b>：噪音錯誤率、幻覺率；以及自錄導覽情境語音。</li>
+  </ol>
+</section>
+
+<section>
+  <h2><span class="num">8</span>總表：各語言推薦模型</h2>
+  <div class="table-wrap"><table>
+    <tr><th>語言</th><th>STT 推薦</th><th class="num">錯誤率</th><th class="num">每句處理¹</th><th>STT 備選</th><th>TTS 推薦</th><th class="num">自然度²</th><th>TTS 備選</th></tr>
+    <tr><td>en</td><td class="rec">Granite-Speech-470M</td><td class="num">5.4%</td><td class="num">0.4 秒</td><td>Parakeet-v2（6.0%）<span class="sub">Whisper small（6.9%）</span></td><td class="rec">Supertonic-3</td><td class="num">4.49</td><td>Piper（4.39，最快）</td></tr>
+    <tr><td>es-ES</td><td class="rec">Parakeet-TDT-0.6B-v3</td><td class="num">4.1%</td><td class="num">0.3 秒</td><td>Nemotron-3.5（6.2%）</td><td class="rec">Supertonic-3</td><td class="num">3.97</td><td>Kokoro（3.58）</td></tr>
+    <tr><td>es-419</td><td class="rec">Parakeet-TDT-0.6B-v3</td><td class="num">3.5%</td><td class="num">0.7 秒</td><td>Qwen3-ASR（3.7%）</td><td class="rec">Supertonic-3</td><td class="num">3.94</td><td>Piper（3.08，墨西哥口音）</td></tr>
+    <tr><td>pt-BR</td><td class="rec">Parakeet-TDT-0.6B-v3</td><td class="num">4.6%</td><td class="num">0.8 秒</td><td>Parakeet 葡語微調（4.6%）</td><td class="rec">Supertonic-3</td><td class="num">4.18</td><td>Kokoro（3.70）</td></tr>
+    <tr><td>pt-PT</td><td class="rec">Parakeet 葡語微調³</td><td class="num">12.8%</td><td class="num">0.35 秒</td><td>Whisper large-v3-turbo<span class="sub">16.3%，慢</span></td><td class="rec">Supertonic-3⁴</td><td class="num">4.15</td><td>Piper（2.76）</td></tr>
+    <tr><td>ja</td><td class="rec">SenseVoice-Small</td><td class="num">6.8%</td><td class="num">0.45 秒</td><td>Parakeet-ja（6.9%）</td><td class="rec">Supertonic-3</td><td class="num">4.23</td><td>Kokoro（3.81）</td></tr>
+  </table></div>
+  <p class="note">¹ Jetson 理論換算，未實測。　² UTMOS（1–5），非英語僅供相對比較。　³ 需量化成 int8 以符合記憶體預算。　⁴ pt-PT 口音待母語者確認。</p>
+  <div class="callout"><b>部署組合：</b>STT 4 個模型（Parakeet-v3、Parakeet 葡語微調、SenseVoice、Granite），依對話語言載入；TTS 1 個模型（Supertonic-3）。若要減少模型數，英語可改用 Parakeet-v3（8.3%），STT 降為 3 個模型。</div>
+</section>
+
+<footer>
+  資料來源：speech-bench 評測框架（3 晚測試結果）。詳細數據與每晚解讀見 <code>reports/report.md</code>；圖表由 <code>docs/figures/make_final_report_figures.py</code> 產生；變更紀錄見 <code>CHANGELOG.md</code>。
+</footer>
+
+</main>
+</body>
+</html>

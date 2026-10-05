@@ -5,6 +5,25 @@
 
 ---
 
+## 2026-10-05（第三晚結束後）
+
+### 第三晚完成
+- 2026-10-01 09:34 開始，4 小時 40 分完成，無錯誤。解讀見 `docs/analysis/round1_night3.md`。
+
+### 結論報告（給 RD 主管）
+- `final_report.html`：單一檔案（圖表以 data URI 內嵌，約 800 KB），可直接用瀏覽器開啟、簡報或寄送；另有 Markdown 版 `final_report.md`。
+- 圖表：`docs/figures/make_final_report_figures.py` 由測試結果產生 5 張圖（STT 錯誤率熱圖、準確度 vs 速度、專用 vs 多語、TTS 自然度與延遲、對話延遲拆解）及數據檔 `final_report_data.json`；配色沿用 dataviz 參考色盤。
+- HTML：`docs/figures/build_final_report_html.py` 將 `final_report.template.html` 的圖片內嵌後輸出 `final_report.html`。
+- 更新方式：重跑上述兩個程式（測試結果更新後，圖表數字會自動更新；報告文字需手動調整）。
+
+### Nemotron：消除 max_length 警告
+- `engines/stt/nemotron_engine.py` 呼叫 `generate()` 時明確給 `max_new_tokens`（整句：依音訊長度；串流：4096），不再每句出現「Using the model-agnostic default `max_length`」警告。已驗證辨識結果與修改前完全相同。
+
+### models.yaml：補標語言專用模型
+- `distil-large-v3-ct2-int8` 標為 `specialized: en`、`kotoba-whisper-v2-ct2-int8` 標為 `specialized: ja`。原本未標，「專用 vs 多語」比較時被誤算成多語模型。
+
+---
+
 ## 2026-10-01（第二晚結束後，第三晚準備）
 
 ### ⚠️ 影響結果：放寬對話延遲的評分刻度

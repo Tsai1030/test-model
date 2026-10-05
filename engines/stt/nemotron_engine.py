@@ -13,6 +13,11 @@ from engines.base import STTEngine, STTResult
 SR = 16000
 LOCALES = {"en": "en-US", "es-ES": "es-ES", "es-419": "es-US", "pt-BR": "pt-BR", "pt-PT": "pt-PT", "ja": "ja-JP",
            "es": "es-ES", "pt": "pt-BR"}
+STREAM_MAX_NEW_TOKENS = 4096     # 串流時音訊長度事先未知，給足夠大的上限
+
+
+def max_new_tokens(n_samples):
+    return 64 + int(n_samples / SR * 25)
 
 
 class NemotronASR(STTEngine):
@@ -48,7 +53,9 @@ class NemotronASR(STTEngine):
         inputs = self.processor(audio, sampling_rate=SR, language=self.locale(lang), return_tensors="pt")
         inputs = inputs.to(self.device, dtype=self.torch_dtype)
         with self.torch.inference_mode():
-            out = self.model.generate(**inputs, return_dict_in_generate=True)
+            # 明確給上限（每秒約 20 個 token 以上綽綽有餘），避免 transformers 每句都警告「用預設 max_length=1600」
+            out = self.model.generate(**inputs, return_dict_in_generate=True,
+                                      max_new_tokens=max_new_tokens(len(audio)))
         text = self.processor.decode(out.sequences, skip_special_tokens=True)
         return STTResult((text[0] if isinstance(text, list) else text).strip(), lang)
 
@@ -106,7 +113,8 @@ class _NemotronStream:
 
     def _start(self):
         first = self._features(self.buf[: self.first_n].copy(), True)
-        kwargs = {**first, "input_features": self._feature_stream(first), "streamer": self.streamer}
+        kwargs = {**first, "input_features": self._feature_stream(first), "streamer": self.streamer,
+                  "max_new_tokens": STREAM_MAX_NEW_TOKENS}
         self.gen_thread = threading.Thread(target=self._generate, args=(kwargs,), daemon=True)
         self.gen_thread.start()
 

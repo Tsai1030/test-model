@@ -66,12 +66,14 @@ stt:
     langs: [en]
     backend_category: ct2-cpu
     license: MIT
+    specialized: en
   kotoba-whisper-v2-ct2-int8:            # repo 名稱請在 P0 確認
     engine: engines.stt.faster_whisper_engine:FasterWhisperSTT
     params: {model: kotoba-tech/kotoba-whisper-v2.0-faster, device: cpu, compute_type: int8, cpu_threads: 4, beam_size: 1}
     langs: [ja]
     backend_category: ct2-cpu
     license: Apache-2.0
+    specialized: ja
 
   # ---- 後端比較：同一個 Whisper small 改用 PyTorch（transformers）
   whisper-small-hf-fp32:

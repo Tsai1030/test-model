@@ -10,7 +10,8 @@
 | ✅ | 第二晚（2026-09-30） | 對話重跑、pt-PT 小模型重測、Whisper medium 與 large-v3-turbo（每語言 50 句），7h39m。解讀見 `docs/analysis/round1_night2.md` |
 | 📋 | 待決定 | 對話延遲分數全為 0 的評分問題：新增延遲門檻或放寬刻度（見第二晚解讀「已知問題」） |
 | ❌ | 第三晚原訂 large-v3 | 已取消（2026-09-30）：超出 STT 記憶體預算，且評測以小模型為主 |
-| ⏳ | 第三晚（改） | 排行榜新模型：9 個小型 STT（多語 + 語言專用）、Nemotron 串流模式與 1 個 TTS（`configs/plans/round1_night3.yaml`）。2026-10-01 已安裝套件、寫好轉接器，冒煙測試通過（11 個模型；SenseVoice 改用 2024-07-17 版、補裝 librosa），待正式執行。Parakeet-Redux 因 Windows 版缺 AVX2 核心改到 Jetson 階段 |
+| ✅ | 第三晚（2026-10-01） | 排行榜新模型：9 個小型 STT、Nemotron 串流、Supertonic-3 TTS，4h40m。解讀見 `docs/analysis/round1_night3.md`。重點：Parakeet-v3 為西語／巴西葡語最佳；巴西葡語 Parakeet 解決 pt-PT（12.8%）；SenseVoice、Parakeet-ja 解決日語；Supertonic-3 是唯一支援全部語言的 TTS 且自然度最高 |
+| 📋 | 下一步 | ① 人工聽測（Supertonic pt-PT 口音、西語方言）② 巴西葡語 Parakeet 量化成 int8 ③ 用新的最佳組合重跑對話測試 ④ Jetson 實測 |
 | 📋 | 第三晚之後 | 撰寫第二、三晚解讀；small 與大模型在相同 50 句上比較；專用 vs 多語比較；選出 STT、TTS、LLM 短名單 |
 
 ---
@@ -116,7 +117,7 @@
 
 | # | 項目 | 說明 |
 |---|---|---|
-| 1 | **人工聽測與評分** | `listening_test.csv`（TTS，1–5 分）、`rating_sheet.csv`（對話相關度、自然度、方言）。優先請母語者確認：Kokoro 西語（西班牙與拉美共用同一聲音）是否像西班牙口音、Piper pt-PT 是否堪用。可用各 run 的 `listen.html` 試聽 |
+| 1 | **人工聽測與評分** | `listening_test.csv`（TTS，1–5 分）、`rating_sheet.csv`（對話相關度、自然度、方言）。可用各 run 的 `listen.html` 試聽。優先確認：① **es-ES**：請西班牙人比較 Kokoro 與 Piper 的自然度與口音；② **es-419**：Kokoro 西語用 espeak-ng 的「es」（西班牙本土）發音規則，拉美西語也套用同一規則，請拉美人確認是否聽起來像西班牙腔（若是，es-419 可能改用 Piper 墨西哥聲音或 Supertonic）；③ Piper pt-PT 是否堪用 |
 | 2 | **Jetson 實測與校準** | 以錨點模型（`configs/anchors.yaml`）校準速度換算係數。Kokoro 在 Jetson GPU 上的實測速度將決定 TTS 選 Kokoro 或 Piper；medium / turbo 的 RTF 門檻也要重新判定 |
 | 3 | **自建導覽語料** | 計畫書中最重要的測試資料：每語言 50–100 句導覽腳本，含專有名詞、數字、年份，由母語者錄音（`data/prepare_custom.py`、`data/recordings/`）。特別是 pt-PT |
 | 4 | **pt-PT STT（若大模型仍不合格）** | NVIDIA Parakeet-TDT-0.6B-v3 / Canary-1B-v2（需 WSL2 或 Colab）；以 faster-whisper 的提示詞功能提示場館名稱等專有名詞 |

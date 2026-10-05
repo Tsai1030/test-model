@@ -1,0 +1,458 @@
+{
+ "stt": {
+  "en": {
+   "whisper-small-ct2-int8": {
+    "n": 100,
+    "err": 0.06875865251499769,
+    "lat_ms": 1388.0375000000001,
+    "mem_mb": 769.5
+   },
+   "whisper-large-v3-turbo-ct2-int8": {
+    "n": 50,
+    "err": 0.05866900175131348,
+    "lat_ms": 8941.275000000001,
+    "mem_mb": 1895.8
+   },
+   "parakeet-tdt-0.6b-v3-int8": {
+    "n": 100,
+    "err": 0.08306414397784956,
+    "lat_ms": 655.4399999999999,
+    "mem_mb": 1339.4
+   },
+   "qwen3-asr-0.6b": {
+    "n": 100,
+    "err": 0.04891555145362252,
+    "lat_ms": 2168.93,
+    "mem_mb": 3085.2
+   },
+   "sensevoice-small-int8": {
+    "n": 100,
+    "err": 0.08721735117674204,
+    "lat_ms": 296.64,
+    "mem_mb": 303.5
+   },
+   "nemotron-3.5-asr-0.6b": {
+    "n": 100,
+    "err": 0.09736963544070143,
+    "lat_ms": 829.28,
+    "mem_mb": 2939.9
+   },
+   "granite-speech-5.0-470m-ctc": {
+    "n": 100,
+    "err": 0.05445316105214582,
+    "lat_ms": 400.62,
+    "mem_mb": 1925.6
+   },
+   "parakeet-tdt-0.6b-v2-int8": {
+    "n": 100,
+    "err": 0.05999077065066913,
+    "lat_ms": 566.8199999999999,
+    "mem_mb": 824.3
+   }
+  },
+  "es-ES": {
+   "whisper-small-ct2-int8": {
+    "n": 100,
+    "err": 0.09753593429158111,
+    "lat_ms": 1338.2,
+    "mem_mb": 769.5
+   },
+   "whisper-large-v3-turbo-ct2-int8": {
+    "n": 50,
+    "err": 0.056,
+    "lat_ms": 8653.6875,
+    "mem_mb": 1895.8
+   },
+   "parakeet-tdt-0.6b-v3-int8": {
+    "n": 100,
+    "err": 0.04106776180698152,
+    "lat_ms": 335.48,
+    "mem_mb": 1339.4
+   },
+   "qwen3-asr-0.6b": {
+    "n": 100,
+    "err": 0.06365503080082136,
+    "lat_ms": 1323.6000000000001,
+    "mem_mb": 3085.2
+   },
+   "nemotron-3.5-asr-0.6b": {
+    "n": 100,
+    "err": 0.061601642710472276,
+    "lat_ms": 560.7599999999999,
+    "mem_mb": 2939.9
+   }
+  },
+  "es-419": {
+   "whisper-small-ct2-int8": {
+    "n": 100,
+    "err": 0.05551086082059534,
+    "lat_ms": 1472.275,
+    "mem_mb": 769.5
+   },
+   "whisper-large-v3-turbo-ct2-int8": {
+    "n": 50,
+    "err": 0.024855012427506214,
+    "lat_ms": 9136.4375,
+    "mem_mb": 1895.8
+   },
+   "parakeet-tdt-0.6b-v3-int8": {
+    "n": 100,
+    "err": 0.035398230088495575,
+    "lat_ms": 740.08,
+    "mem_mb": 1339.4
+   },
+   "qwen3-asr-0.6b": {
+    "n": 100,
+    "err": 0.037409493161705554,
+    "lat_ms": 2905.52,
+    "mem_mb": 3085.2
+   },
+   "nemotron-3.5-asr-0.6b": {
+    "n": 100,
+    "err": 0.044650040225261464,
+    "lat_ms": 1260.99,
+    "mem_mb": 2939.9
+   }
+  },
+  "pt-BR": {
+   "whisper-small-ct2-int8": {
+    "n": 100,
+    "err": 0.0704,
+    "lat_ms": 1532.425,
+    "mem_mb": 769.5
+   },
+   "whisper-large-v3-turbo-ct2-int8": {
+    "n": 50,
+    "err": 0.05003971405877681,
+    "lat_ms": 9274.6375,
+    "mem_mb": 1895.8
+   },
+   "parakeet-tdt-0.6b-v3-int8": {
+    "n": 100,
+    "err": 0.046,
+    "lat_ms": 797.5600000000001,
+    "mem_mb": 1339.4
+   },
+   "qwen3-asr-0.6b": {
+    "n": 100,
+    "err": 0.0684,
+    "lat_ms": 3080.57,
+    "mem_mb": 3085.2
+   },
+   "nemotron-3.5-asr-0.6b": {
+    "n": 100,
+    "err": 0.0596,
+    "lat_ms": 973.24,
+    "mem_mb": 2939.9
+   },
+   "parakeet-v3-ptbr-tagarela": {
+    "n": 100,
+    "err": 0.0464,
+    "lat_ms": 897.6200000000001,
+    "mem_mb": 3108.1
+   }
+  },
+  "pt-PT": {
+   "whisper-small-ct2-int8": {
+    "n": 100,
+    "err": 0.36151079136690645,
+    "lat_ms": 1258.1125,
+    "mem_mb": 769.5
+   },
+   "whisper-large-v3-turbo-ct2-int8": {
+    "n": 50,
+    "err": 0.1630901287553648,
+    "lat_ms": 8134.062499999999,
+    "mem_mb": 1895.8
+   },
+   "parakeet-tdt-0.6b-v3-int8": {
+    "n": 100,
+    "err": 0.2787769784172662,
+    "lat_ms": 292.44,
+    "mem_mb": 1339.4
+   },
+   "qwen3-asr-0.6b": {
+    "n": 100,
+    "err": 0.23741007194244604,
+    "lat_ms": 899.77,
+    "mem_mb": 3085.2
+   },
+   "nemotron-3.5-asr-0.6b": {
+    "n": 100,
+    "err": 0.3039568345323741,
+    "lat_ms": 409.59000000000003,
+    "mem_mb": 2939.9
+   },
+   "parakeet-v3-ptbr-tagarela": {
+    "n": 100,
+    "err": 0.12769784172661872,
+    "lat_ms": 350.8,
+    "mem_mb": 3108.1
+   }
+  },
+  "ja": {
+   "whisper-small-ct2-int8": {
+    "n": 100,
+    "err": 0.11034888279106232,
+    "lat_ms": 1544.025,
+    "mem_mb": 769.5
+   },
+   "whisper-large-v3-turbo-ct2-int8": {
+    "n": 50,
+    "err": 0.06436781609195402,
+    "lat_ms": 7655.374999999999,
+    "mem_mb": 1895.8
+   },
+   "qwen3-asr-0.6b": {
+    "n": 100,
+    "err": 0.07781262250098,
+    "lat_ms": 2568.33,
+    "mem_mb": 3085.2
+   },
+   "sensevoice-small-int8": {
+    "n": 100,
+    "err": 0.06781654253234026,
+    "lat_ms": 451.22,
+    "mem_mb": 303.5
+   },
+   "nemotron-3.5-asr-0.6b": {
+    "n": 100,
+    "err": 0.1279890239121913,
+    "lat_ms": 1086.91,
+    "mem_mb": 2939.9
+   },
+   "parakeet-tdt_ctc-0.6b-ja-int8": {
+    "n": 100,
+    "err": 0.06918855350842806,
+    "lat_ms": 725.76,
+    "mem_mb": 1061.5
+   },
+   "kotoba-whisper-v2-ct2-int8": {
+    "n": 100,
+    "err": 0.08094864758918072,
+    "lat_ms": 7365.1125,
+    "mem_mb": 1799.0
+   },
+   "moonshine-tiny-ja": {
+    "n": 100,
+    "err": 0.12877303018424147,
+    "lat_ms": 267.1,
+    "mem_mb": 489.6
+   }
+  }
+ },
+ "specialized": [
+  {
+   "lang": "en",
+   "spec_name": "Granite",
+   "multi_name": "Qwen3-ASR",
+   "spec_err": 0.05445316105214582,
+   "multi_err": 0.04891555145362252,
+   "diff": 0.005537609598523299,
+   "lo": -0.0032010253756552588,
+   "hi": 0.014045159706493365
+  },
+  {
+   "lang": "pt-BR",
+   "spec_name": "Parakeet 葡語",
+   "multi_name": "Parakeet-v3",
+   "spec_err": 0.0464,
+   "multi_err": 0.046,
+   "diff": 0.0003999999999999976,
+   "lo": -0.008530450519123559,
+   "hi": 0.009545487691610958
+  },
+  {
+   "lang": "pt-PT",
+   "spec_name": "Parakeet 葡語",
+   "multi_name": "Qwen3-ASR",
+   "spec_err": 0.12769784172661872,
+   "multi_err": 0.23741007194244604,
+   "diff": -0.10971223021582732,
+   "lo": -0.15658795806482637,
+   "hi": -0.06840244416844374
+  },
+  {
+   "lang": "ja",
+   "spec_name": "Parakeet-ja",
+   "multi_name": "SenseVoice",
+   "spec_err": 0.06918855350842806,
+   "multi_err": 0.06781654253234026,
+   "diff": 0.0013720109760878008,
+   "lo": -0.01831560327896153,
+   "hi": 0.023483296682730557
+  }
+ ],
+ "tts": {
+  "en": {
+   "supertonic-3": {
+    "utmos": 4.487,
+    "asr_err": 0.0133,
+    "ttfa_ms": 871.6,
+    "mem_mb": 525.3
+   },
+   "kokoro-82m": {
+    "utmos": 4.5,
+    "asr_err": 0.0,
+    "ttfa_ms": 1049.34,
+    "mem_mb": 1485.8
+   },
+   "piper-medium": {
+    "utmos": 4.388,
+    "asr_err": 0.0133,
+    "ttfa_ms": 186.78,
+    "mem_mb": 764.9
+   }
+  },
+  "es-ES": {
+   "supertonic-3": {
+    "utmos": 3.97,
+    "asr_err": 0.0432,
+    "ttfa_ms": 998.4,
+    "mem_mb": 525.3
+   },
+   "kokoro-82m": {
+    "utmos": 3.582,
+    "asr_err": 0.0072,
+    "ttfa_ms": 1064.29,
+    "mem_mb": 1485.8
+   },
+   "piper-medium": {
+    "utmos": 2.515,
+    "asr_err": 0.0072,
+    "ttfa_ms": 316.96,
+    "mem_mb": 764.9
+   }
+  },
+  "es-419": {
+   "supertonic-3": {
+    "utmos": 3.936,
+    "asr_err": 0.0513,
+    "ttfa_ms": 1019.6,
+    "mem_mb": 525.3
+   },
+   "kokoro-82m": {
+    "utmos": 3.479,
+    "asr_err": 0.0064,
+    "ttfa_ms": 1141.65,
+    "mem_mb": 1485.8
+   },
+   "piper-medium": {
+    "utmos": 3.085,
+    "asr_err": 0.0385,
+    "ttfa_ms": 237.94,
+    "mem_mb": 764.9
+   }
+  },
+  "pt-BR": {
+   "supertonic-3": {
+    "utmos": 4.179,
+    "asr_err": 0.0282,
+    "ttfa_ms": 998.44,
+    "mem_mb": 525.3
+   },
+   "kokoro-82m": {
+    "utmos": 3.7,
+    "asr_err": 0.0,
+    "ttfa_ms": 1213.09,
+    "mem_mb": 1485.8
+   },
+   "piper-medium": {
+    "utmos": 3.499,
+    "asr_err": 0.0352,
+    "ttfa_ms": 275.0,
+    "mem_mb": 764.9
+   }
+  },
+  "pt-PT": {
+   "supertonic-3": {
+    "utmos": 4.146,
+    "asr_err": 0.0483,
+    "ttfa_ms": 1051.72,
+    "mem_mb": 525.3
+   },
+   "piper-medium": {
+    "utmos": 2.763,
+    "asr_err": 0.1241,
+    "ttfa_ms": 176.92,
+    "mem_mb": 764.9
+   }
+  },
+  "ja": {
+   "supertonic-3": {
+    "utmos": 4.232,
+    "asr_err": 0.028,
+    "ttfa_ms": 872.68,
+    "mem_mb": 525.3
+   },
+   "kokoro-82m": {
+    "utmos": 3.81,
+    "asr_err": 0.021,
+    "ttfa_ms": 1669.53,
+    "mem_mb": 1485.8
+   }
+  }
+ },
+ "dialogue": [
+  {
+   "name": "Whisper small + gemma-3-4b-q4 + piper-medium",
+   "vad": 300.0,
+   "stt": 1253.18,
+   "llm": 1777.8,
+   "tts": 143.18,
+   "total": 3474.16,
+   "facts_min": 0.6667,
+   "facts_max": 1.0
+  },
+  {
+   "name": "Whisper small + qwen2.5-1.5b-q4 + kokoro-82m",
+   "vad": 300.0,
+   "stt": 1434.3799999999999,
+   "llm": 764.78,
+   "tts": 1127.08,
+   "total": 3626.24,
+   "facts_min": 0.5,
+   "facts_max": 1.0
+  },
+  {
+   "name": "Whisper small + gemma-3-1b-q4 + kokoro-82m",
+   "vad": 300.0,
+   "stt": 1502.18,
+   "llm": 704.54,
+   "tts": 1212.56,
+   "total": 3719.28,
+   "facts_min": 0.5,
+   "facts_max": 0.6667
+  },
+  {
+   "name": "Whisper small + qwen2.5-3b-q4 + kokoro-82m",
+   "vad": 300.0,
+   "stt": 1223.44,
+   "llm": 1198.88,
+   "tts": 1076.12,
+   "total": 3798.44,
+   "facts_min": 0.6667,
+   "facts_max": 0.8333
+  },
+  {
+   "name": "Whisper small + gemma-3-4b-q4 + kokoro-82m",
+   "vad": 300.0,
+   "stt": 1650.58,
+   "llm": 2107.7,
+   "tts": 1540.24,
+   "total": 5598.5199999999995,
+   "facts_min": 0.6667,
+   "facts_max": 1.0
+  },
+  {
+   "name": "Whisper large-v3-turbo + gemma-3-4b-q4 + kokoro-82m",
+   "vad": 300.0,
+   "stt": 8755.08,
+   "llm": 1816.76,
+   "tts": 1430.8600000000001,
+   "total": 12302.7,
+   "facts_min": 0.6667,
+   "facts_max": 1.0
+  }
+ ]
+}
