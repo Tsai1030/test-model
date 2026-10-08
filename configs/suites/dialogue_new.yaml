@@ -1,0 +1,30 @@
+# 語音對話（新組合）：依第三晚結論，每種語言用各自推薦的 STT（combo 的 langs 限定該組只跑哪些語言）
+# 計時方式與 dialogue_quick 相同（逐段相加：VAD + STT + LLM 第一句 + TTS 首段），可直接比較。
+# LLM 與 TTS 並行（邊生成邊合成）不影響「第一段聲音出現的時間」，留到 Jetson 實作。
+name: dialogue_new
+task: dialogue
+combos:
+  # A. 推薦組合：Qwen2.5-1.5B（最快的 LLM）＋ Supertonic-3（唯一涵蓋 6 種語言的 TTS）
+  - {stt: granite-speech-5.0-470m-ctc, llm: qwen2.5-1.5b-q4, tts: supertonic-3, langs: [en]}
+  - {stt: parakeet-tdt-0.6b-v3-int8,   llm: qwen2.5-1.5b-q4, tts: supertonic-3, langs: [es-ES, es-419, pt-BR]}
+  - {stt: parakeet-v3-ptbr-tagarela,   llm: qwen2.5-1.5b-q4, tts: supertonic-3, langs: [pt-PT]}
+  - {stt: sensevoice-small-int8,       llm: qwen2.5-1.5b-q4, tts: supertonic-3, langs: [ja]}
+  # B. 速度備案：TTS 改 Piper（首段最快；無日語）
+  - {stt: granite-speech-5.0-470m-ctc, llm: qwen2.5-1.5b-q4, tts: piper-medium, langs: [en]}
+  - {stt: parakeet-tdt-0.6b-v3-int8,   llm: qwen2.5-1.5b-q4, tts: piper-medium, langs: [es-ES, es-419, pt-BR]}
+  - {stt: parakeet-v3-ptbr-tagarela,   llm: qwen2.5-1.5b-q4, tts: piper-medium, langs: [pt-PT]}
+  # C. 舊基準（第二晚已測過）：同一次執行重測，「新組合快了多少」才不受不同天電腦狀態影響
+  - {stt: whisper-small-ct2-int8,      llm: qwen2.5-1.5b-q4, tts: kokoro-82m}
+  # D. 品質參考：LLM 改 Gemma-3-4B（第二晚回答最準），看換成較準的 LLM 要多付多少延遲
+  - {stt: granite-speech-5.0-470m-ctc, llm: gemma-3-4b-q4,   tts: supertonic-3, langs: [en]}
+  - {stt: parakeet-tdt-0.6b-v3-int8,   llm: gemma-3-4b-q4,   tts: supertonic-3, langs: [es-ES, es-419, pt-BR]}
+  - {stt: parakeet-v3-ptbr-tagarela,   llm: gemma-3-4b-q4,   tts: supertonic-3, langs: [pt-PT]}
+  - {stt: sensevoice-small-int8,       llm: gemma-3-4b-q4,   tts: supertonic-3, langs: [ja]}
+languages: [en, es-ES, es-419, pt-BR, pt-PT, ja]
+n_samples: 6
+warmup: 1
+vad_endpoint_ms: 300
+max_tokens: 160
+temperature: 0.3
+synthesize_full: true
+question_tts: {default: kokoro-82m, pt-PT: piper-medium}   # 與第二晚相同的提問音檔（已快取）

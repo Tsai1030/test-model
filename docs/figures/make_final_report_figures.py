@@ -29,7 +29,16 @@ R = ROOT / "results"
 STT_RUNS = [R / "20260929-145339_round1_stt_small_pc", R / "20260930-102219_round1_stt_small_ptpt_pc",
             R / "20260930-102219_round1_stt_mid_pc", R / "20261001-093415_round1_night3_stt_multi_pc",
             R / "20261001-093415_round1_night3_stt_specialized_pc"]
-DIALOGUE_RUN = "20260930-102219_round1_dialogue_pc"
+DIALOGUE_OLD = "20260930-102219_round1_dialogue_pc"            # 第二晚：Whisper small 等舊組合
+DIALOGUE_NEW = "20261005-163306_round2_dialogue_dialogue_new_pc"  # 第二輪：各語言推薦 STT 的新組合
+# 圖 5 顯示的組合：(run, STT 條件, LLM, TTS, 顯示名稱)。舊組合用第二晚的數字（比本次重測的舊基準快，比較較保守）
+DIALOGUE_SHOW = [
+    (DIALOGUE_NEW, "new", "qwen2.5-1.5b-q4", "piper-medium", "新｜推薦 STT ＋ Qwen2.5-1.5B ＋ Piper（無 ja）"),
+    (DIALOGUE_NEW, "new", "qwen2.5-1.5b-q4", "supertonic-3", "新｜推薦 STT ＋ Qwen2.5-1.5B ＋ Supertonic-3"),
+    (DIALOGUE_NEW, "new", "gemma-3-4b-q4", "supertonic-3", "新｜推薦 STT ＋ Gemma-3-4B ＋ Supertonic-3"),
+    (DIALOGUE_OLD, "whisper-small-ct2-int8", "gemma-3-4b-q4", "piper-medium", "舊｜Whisper small ＋ Gemma-3-4B ＋ Piper（無 ja）"),
+    (DIALOGUE_OLD, "whisper-small-ct2-int8", "qwen2.5-1.5b-q4", "kokoro-82m", "舊｜Whisper small ＋ Qwen2.5-1.5B ＋ Kokoro（無 pt-PT）"),
+]
 
 # ---- 參考色盤（light）
 SURF, INK, INK2, MUTED, GRID, AXIS = "#fcfcfb", "#0b0b0b", "#52514e", "#898781", "#e1e0d9", "#c3c2b7"
@@ -297,22 +306,26 @@ def fig_tts(comb):
 
 
 # ---------------------------------------------------------------- 圖 5：對話延遲拆解
-def fig_dialogue(comb):
-    rows = [r for r in comb if r["task"] == "dialogue" and r["hw_profile"] == "jetson-orin-nx-est"
-            and r["run_id"].endswith(DIALOGUE_RUN)]
-    by = defaultdict(list)
-    for r in rows:
-        by[r["model"]].append(r)
+def fig_dialogue():
+    # combined.csv 只保留每個組合最新的一次，第二晚的舊基準已被第二輪重測取代，所以直接讀所有換算值
+    with open(R / "_estimates" / "summary.csv", encoding="utf-8-sig") as f:
+        est = [r for r in csv.DictReader(f) if r["task"] == "dialogue"]
     combos = []
-    for model, rs in by.items():
+    for run, stt_cond, llm_id, tts_id, name in DIALOGUE_SHOW:
+        rs = []
+        for r in est:
+            stt, llm, tts = r["model"].split("+")
+            new_stt = stt_cond == "new" and not stt.startswith("whisper")
+            if r["run_id"] == f"est:{run}" and (new_stt or stt == stt_cond) and llm == llm_id and tts == tts_id:
+                rs.append(r)
         mean = lambda k: statistics.mean(float(r[k]) for r in rs if r[k])
         stt, llm, tts, vad = mean("stt_ms_p50"), mean("llm_first_sentence_ms_p50"), mean("tts_ttfa_ms_p50"), mean("vad_endpoint_ms")
         facts = [float(r["fact_recall"]) for r in rs if r["fact_recall"]]
-        name = model.replace("-ct2-int8", "").replace("whisper-", "Whisper ").replace("+", " + ")
-        combos.append({"name": name, "vad": vad, "stt": stt, "llm": llm, "tts": tts, "total": vad + stt + llm + tts,
+        combos.append({"name": name, "run": run, "langs": sorted(r["lang"] for r in rs),
+                       "turn_p50_by_lang": {r["lang"]: float(r["turn_latency_ms_p50"]) for r in rs},
+                       "vad": vad, "stt": stt, "llm": llm, "tts": tts, "total": vad + stt + llm + tts,
                        "facts_min": min(facts), "facts_max": max(facts)})
-    combos.sort(key=lambda c: c["total"])
-    fig, ax = plt.subplots(figsize=(9.6, 3.6))
+    fig, ax = plt.subplots(figsize=(10, 3.4))
     segs = [("vad", "判斷說完（固定 0.3 秒）", NEUTRAL), ("stt", "STT", S1), ("llm", "LLM 第一句", S2), ("tts", "TTS 首段", S3)]
     for i, c in enumerate(combos):
         left = 0
@@ -321,13 +334,15 @@ def fig_dialogue(comb):
             ax.barh(i, w, left=left, height=0.55, color=color, edgecolor=SURF, linewidth=2,
                     label=label if i == 0 else None, zorder=2)
             left += w
-        ax.text(left + 0.15, i, f"{left:.1f} 秒", va="center", fontsize=8, color=INK)
+        ax.text(left + 0.08, i, f"{left:.1f} 秒", va="center", fontsize=8, color=INK)
+    n_new = sum(c["run"] == DIALOGUE_NEW for c in combos)
+    ax.axhline(n_new - 0.5, color=AXIS, linewidth=0.8, zorder=1)
     ax.axvline(1.5, color=INK2, linewidth=1.2, zorder=3)
     ax.text(1.55, -0.75, "目標 1.5 秒", fontsize=8, color=INK2, va="bottom")
     ax.set_yticks(range(len(combos)), [c["name"] for c in combos], fontsize=8)
     ax.set_ylim(len(combos) - 0.4, -1.0)
     ax.set_xlim(0, max(c["total"] for c in combos) / 1000 * 1.12)
-    ax.set_xlabel("回合延遲（秒，Jetson 理論換算，各語言平均）")
+    ax.set_xlabel("回合延遲（秒，Jetson 理論換算，各組支援語言的平均）")
     ax.grid(True, axis="x", color=GRID, linewidth=0.8)
     ax.set_axisbelow(True)
     ax.tick_params(length=0)
@@ -359,7 +374,7 @@ def main():
     fig_specialized(spec_rows)
     comb = load_combined()
     tts = fig_tts(comb)
-    dialogue = fig_dialogue(comb)
+    dialogue = fig_dialogue()
     (OUT / "final_report_data.json").write_text(json.dumps(
         {"stt": tab, "specialized": spec_rows, "tts": tts, "dialogue": dialogue}, ensure_ascii=False, indent=1),
         encoding="utf-8")

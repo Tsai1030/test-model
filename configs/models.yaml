@@ -7,6 +7,7 @@
 #   streaming:         串流能力（選填，報告顯示用）：native（原生串流）| chunked（有條件／分段模擬）|
 #                      offline（整句處理）| sentence（TTS 逐句輸出）。未填時依引擎推定
 #   specialized:       語言專用模型填語言碼（如 ja）；未填 = 多語模型。用於「專用 vs 多語」比較
+#   user_suffix:       LLM 選填：附加在使用者訊息後的文字（如 Qwen3 的「 /no_think」關閉思考模式）。目前只有 llm_eval.py 使用
 #
 # 尚未寫轉接器的候選：sherpa-onnx 串流 zipformer、Vosk、CosyVoice 2/3、Style-BERT-VITS2、Fish-Speech、F5-TTS、
 # Parler-TTS、Qwen3-TTS（需 GPU）。Parakeet-Redux 已寫轉接器，但 Windows 版 kestrel 沒有 AVX2 核心，需 Linux / Jetson
@@ -281,6 +282,27 @@ llm:
     backend_category: llamacpp-cpu
     quant: q4_k_m
     license: Llama 3.2 Community License
+  # ---- 醫療照護評測的新候選（2026-10-05；見 docs/roadmap.md「LLM 評測：醫療照護情境」）
+  qwen3-1.7b-q4:                             # 思考 / 不思考混合模型；評測用不思考模式
+    engine: engines.llm.llama_cpp_engine:LlamaCppLLM
+    params: {repo_id: unsloth/Qwen3-1.7B-GGUF, filename: "Qwen3-1.7B-Q4_K_M.gguf", n_threads: 4}
+    user_suffix: " /no_think"
+    backend_category: llamacpp-cpu
+    quant: q4_k_m
+    license: Apache-2.0
+  qwen3-4b-2507-q4:                          # Qwen3-4B-Instruct-2507：只有不思考模式
+    engine: engines.llm.llama_cpp_engine:LlamaCppLLM
+    params: {repo_id: unsloth/Qwen3-4B-Instruct-2507-GGUF, filename: "Qwen3-4B-Instruct-2507-Q4_K_M.gguf", n_threads: 4}
+    backend_category: llamacpp-cpu
+    quant: q4_k_m
+    license: Apache-2.0
+  medgemma-4b-q4:                            # Google 醫療專用（Gemma 3 4B 衍生）；原版需同意條款，此為 unsloth 轉檔
+    engine: engines.llm.llama_cpp_engine:LlamaCppLLM
+    params: {repo_id: unsloth/medgemma-4b-it-GGUF, filename: "medgemma-4b-it-Q4_K_M.gguf", n_threads: 4}
+    backend_category: llamacpp-cpu
+    quant: q4_k_m
+    license: Health AI Developer Foundations Terms（商用前需法務確認）
+    specialized: medical
   gemma-3-4b-q4-cuda:
     engine: engines.llm.llama_cpp_engine:LlamaCppLLM
     params: {repo_id: ggml-org/gemma-3-4b-it-GGUF, filename: "*Q4_K_M.gguf", n_gpu_layers: -1}

@@ -123,21 +123,47 @@ def fact_marks(r, lang):
     return "<span class='ok'>事實 ✓</span>" if all(hits) else "<span class='bad'>事實 ✗</span>"
 
 
+ACTION_LABEL = {"call_now": "應立即呼叫", "notify": "應轉告", "none": "不需通報"}
+TAG_LABEL = {"call": "立即呼叫", "notify": "轉告", None: "無通報"}
+
+
+def care_marks(r):
+    """照護情境題：顯示模型的通報標記，以及是否達到預期等級。"""
+    if "action" not in r:
+        return ""
+    ok = "<span class='ok'>✓</span>" if r["action_ok"] else "<span class='bad'>✗</span>"
+    out = f"通報：{TAG_LABEL.get(r.get('tag'), r.get('tag'))} {ok}"
+    if r.get("rule_hits"):   # 緊急快速通道：規則層命中時先播固定回應
+        out += f" · 規則層攔截（{esc(', '.join(r['rule_hits']))}）"
+    return out
+
+
 def dialogue_section(lang, items, combos, summary, run_dir):
     heads = []
+    care = any("action" in r for it in items.values() for r in it.values())
     for c in combos:
         s = summary.get((c, lang))
-        meta = (f"事實正確 {fnum(s.get('fact_recall'), 100, 0)}% · 回合延遲 p50 {fnum(s.get('turn_latency_ms_p50'), 0.001)} s"
-                if s else "不支援此語言")
+        if not s:
+            meta = "不支援此語言"
+        elif care:
+            meta = (f"預期等級達成 {fnum(s.get('care_action_ok_rate'), 100, 0)}% · 緊急漏報 "
+                    f"{fnum(s.get('emergency_miss_rate'), 100, 0)}% · 回合延遲 p50 {fnum(s.get('turn_latency_ms_p50'), 0.001)} s")
+        else:
+            meta = (f"事實正確 {fnum(s.get('fact_recall'), 100, 0)}% · 回合延遲 p50 "
+                    f"{fnum(s.get('turn_latency_ms_p50'), 0.001)} s")
         heads.append(f"<th>{short_combo(c)}<div class='meta'>{meta}</div></th>")
     rows = []
     for item_id in sorted(items):
         by_combo = items[item_id]
         first = next(iter(by_combo.values()))
-        q_wav = ROOT / "data" / "dialogue" / "audio" / lang / f"{item_id}.wav"
+        q_wav = ROOT / "data" / ("care" if care else "dialogue") / "audio" / lang / f"{item_id}.wav"
         q_audio = (f"<audio controls preload='none' src='{esc(Path(os.path.relpath(q_wav, run_dir)).as_posix())}'></audio>"
                    if q_wav.exists() else "")
         tag = "<div class='meta'>問題語音為 TTS 合成</div>" if first.get("question_synthetic") else ""
+        if care:   # 預期通報等級與多輪題的前文
+            history = "".join(f"<div class='meta'>{'住民' if h['role'] == 'user' else '機器人'}（前文）：{esc(h['content'])}</div>"
+                              for h in first.get("history", []))
+            tag = f"<div class='meta'>{ACTION_LABEL[first['action']]}</div>{history}{tag}"
         cells = []
         for c in combos:
             r = by_combo.get(c)
@@ -146,7 +172,7 @@ def dialogue_section(lang, items, combos, summary, run_dir):
                 continue
             cells.append(
                 f"<td><audio controls preload='none' src='{esc(r['wav'])}'></audio>"
-                f"<div class='meta'>回合延遲 {r['turn_latency_s']:.1f} s · {fact_marks(r, lang)}</div>"
+                f"<div class='meta'>回合延遲 {r['turn_latency_s']:.1f} s · {fact_marks(r, lang)}{care_marks(r)}</div>"
                 f"<div class='heard'>STT 聽到：{esc(r['stt_hyp'])}</div>"
                 f"<div class='resp'>{esc(r['response'])}</div></td>")
         rows.append(f"<tr><td class='num'>{esc(item_id)}</td><td class='text'>{esc(first['question'])}{q_audio}{tag}</td>"
@@ -173,10 +199,12 @@ def build(run_dir):
                     "與原文不同處就是被判定唸錯（也可能是 Whisper 聽錯，特別是 pt-PT 口音）。</p>")
         body += [tts_section(l, data["tts"][l], models, summary) for l in L.ALL if l in data["tts"]]
     if data["dialogue"]:
-        combos = sorted({c for items in data["dialogue"].values() for it in items.values() for c in it})
         body.append("<h1>對話試聽對照</h1><p class='lead'>每列一個問題，並排各組合的回答。「STT 聽到」是語音辨識的結果；"
                     "事實 ✓ / ✗ 為自動檢查回答是否包含正確資訊（啟發式，需人工確認）。表格可左右捲動。</p>")
-        body += [dialogue_section(l, data["dialogue"][l], combos, summary, run_dir) for l in L.ALL if l in data["dialogue"]]
+        for l in L.ALL:
+            if l in data["dialogue"]:   # 只列出該語言有跑的組合（各語言可能用不同 STT）
+                combos = sorted({c for it in data["dialogue"][l].values() for c in it})
+                body.append(dialogue_section(l, data["dialogue"][l], combos, summary, run_dir))
     page = (f"<!doctype html><html lang='zh-Hant'><head><meta charset='utf-8'>"
             f"<meta name='viewport' content='width=device-width, initial-scale=1'><title>試聽 · {esc(run_dir.name)}</title>"
             f"<style>{CSS}</style></head><body><main><p class='meta'>{esc(run_dir.name)}</p>{''.join(body)}</main></body></html>")

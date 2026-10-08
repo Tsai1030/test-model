@@ -1,0 +1,26 @@
+# 照護情境對話＋延遲改進（2026-10-07）：與 dialogue_care.yaml 相同的題目、STT、TTS、Qwen3-4B 與守則第 3 版，
+# 另外開啟三項改進，與上一輪（20261007-091647）逐題比較：
+#   fast_path:   規則層（data/care/emergency_rules.yaml）或 LLM 的 [CALL_NURSE] 觸發時，立即通報並播放固定回應
+#                （data/care/fixed_responses.yaml），不必等 LLM 寫完第一句
+#   first_chunk: clause → TTS 在逗號等子句標點處就開始唸
+#   short_first: true   → 系統提示要求第一句很短（六個字以內）
+name: dialogue_care_fast
+task: dialogue
+questions: care
+policy: policy_v3.md
+fast_path: true
+first_chunk: clause
+short_first: true
+combos:
+  - {stt: granite-speech-5.0-470m-ctc, llm: qwen3-4b-2507-q4, tts: supertonic-3, langs: [en]}
+  - {stt: parakeet-tdt-0.6b-v3-int8,   llm: qwen3-4b-2507-q4, tts: supertonic-3, langs: [es-ES, es-419, pt-BR]}
+  - {stt: parakeet-v3-ptbr-tagarela,   llm: qwen3-4b-2507-q4, tts: supertonic-3, langs: [pt-PT]}
+  - {stt: sensevoice-small-int8,       llm: qwen3-4b-2507-q4, tts: supertonic-3, langs: [ja]}
+languages: [en, es-ES, es-419, pt-BR, pt-PT, ja]
+n_samples: 46
+warmup: 1
+vad_endpoint_ms: 300
+max_tokens: 200
+temperature: 0.0
+synthesize_full: true
+question_tts: {default: kokoro-82m, pt-PT: piper-medium}   # 提問音檔已快取，與上一輪相同

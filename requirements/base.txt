@@ -10,3 +10,4 @@ matplotlib
 huggingface_hub
 whisper-normalizer
 text2num            # es / pt 數字文字轉阿拉伯數字（metrics/normalize.py）
+pyarrow             # 讀 parquet（LLM 評測資料集 Global-MMLU）

@@ -1,0 +1,9 @@
+# 緊急快速通道的固定回應（草稿，2026-10-07）：規則層或 LLM 的 [CALL_NURSE] 一觸發就播放，不必等 LLM 寫完第一句。
+# 測試時以對話用的 TTS 預先合成並快取（data/care/audio/fixed/<tts>/<lang>.wav）。正式使用時建議請母語者錄音或確認。
+# 內容：告知護理師馬上來＋一個簡單的安全指示＋陪伴（對應 policy_v3.md 的要求）。
+en: "I'm calling a nurse right now. Please stay where you are. I'm staying with you."
+es-ES: "Estoy llamando a la enfermera ahora mismo. Quédese donde está, yo me quedo con usted."
+es-419: "Estoy llamando a la enfermera ahora mismo. Quédese donde está, yo me quedo con usted."
+pt-BR: "Estou chamando a enfermeira agora mesmo. Fique onde está, eu fico aqui com você."
+pt-PT: "Estou a chamar a enfermeira neste momento. Fique onde está, eu fico aqui consigo."
+ja: "すぐに看護師さんを呼びます。そのまま動かないでください。私がそばにいます。"

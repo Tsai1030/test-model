@@ -1,0 +1,12 @@
+# 第三輪：照護情境的完整對話延遲（2026-10-06）。設計理由見 docs/roadmap.md。
+#   python run_all.py --plan configs/plans/round3_care_dialogue.yaml --smoke-only     # 冒煙測試
+#   python run_all.py --plan configs/plans/round3_care_dialogue.yaml --skip-smoke     # 正式測試（約 2.5–3 小時）
+# 第一次執行會先用 Kokoro / Piper 合成 46 題 × 6 種語言的提問音檔（約 20–30 分鐘，之後重複使用）。
+name: round3_care_dialogue
+hw: pc
+
+steps:
+  - name: dialogue_care
+    suite: configs/suites/dialogue_care.yaml
+    score: [--utmos]
+    smoke: {limit: 2, langs: [en, ja]}

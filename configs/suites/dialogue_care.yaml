@@ -1,0 +1,26 @@
+# 照護情境對話：用 LLM 評測選出的 Qwen3-4B ＋ 守則第 3 版，實測完整對話鏈路的延遲。
+# 題目、系統提示與 llm_eval.py 相同（bench/care.py）；提問音檔由 question_tts 合成並快取在 data/care/audio/。
+# 除回合延遲外，另量「通報延遲」：住民說完 → 系統讀到 [CALL_NURSE] 標記（緊急時不必等 TTS）。
+name: dialogue_care
+task: dialogue
+questions: care
+policy: policy_v3.md
+combos:
+  # 主要：Qwen3-4B-Instruct-2507（照護評測首選）
+  - {stt: granite-speech-5.0-470m-ctc, llm: qwen3-4b-2507-q4, tts: supertonic-3, langs: [en]}
+  - {stt: parakeet-tdt-0.6b-v3-int8,   llm: qwen3-4b-2507-q4, tts: supertonic-3, langs: [es-ES, es-419, pt-BR]}
+  - {stt: parakeet-v3-ptbr-tagarela,   llm: qwen3-4b-2507-q4, tts: supertonic-3, langs: [pt-PT]}
+  - {stt: sensevoice-small-int8,       llm: qwen3-4b-2507-q4, tts: supertonic-3, langs: [ja]}
+  # 對照：Qwen2.5-1.5B，同一份提示（看換成 4B 要多付多少延遲）
+  - {stt: granite-speech-5.0-470m-ctc, llm: qwen2.5-1.5b-q4,  tts: supertonic-3, langs: [en]}
+  - {stt: parakeet-tdt-0.6b-v3-int8,   llm: qwen2.5-1.5b-q4,  tts: supertonic-3, langs: [es-ES, es-419, pt-BR]}
+  - {stt: parakeet-v3-ptbr-tagarela,   llm: qwen2.5-1.5b-q4,  tts: supertonic-3, langs: [pt-PT]}
+  - {stt: sensevoice-small-int8,       llm: qwen2.5-1.5b-q4,  tts: supertonic-3, langs: [ja]}
+languages: [en, es-ES, es-419, pt-BR, pt-PT, ja]
+n_samples: 46
+warmup: 1
+vad_endpoint_ms: 300
+max_tokens: 200
+temperature: 0.0            # 與 llm_eval.py 相同，回答可重現
+synthesize_full: true
+question_tts: {default: kokoro-82m, pt-PT: piper-medium}

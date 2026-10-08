@@ -48,6 +48,21 @@ def first_complete_sentence(buf: str, min_chars: int = 8):
     return None
 
 
+_CLAUSE_MARKS = ",、，;；:："
+
+
+def first_complete_clause(buf: str, min_chars: int = 12):
+    """比 first_complete_sentence 更早送 TTS：句子結束，或逗號等子句標點之後（片段至少 min_chars 字）就切。
+    串流中標點後要已出現下一個字元，避免把「12,5」這類數字切開。"""
+    sent = first_complete_sentence(buf, min_chars)
+    for i, ch in enumerate(buf):
+        if ch in _CLAUSE_MARKS and i + 1 < len(buf) and not buf[i + 1].isdigit():
+            seg = buf[: i + 1].strip()
+            if len(seg) >= min_chars and (sent is None or len(seg) < len(sent)):
+                return seg
+    return sent
+
+
 def clean_for_tts(text: str) -> str:
     text = re.sub(r"[*_#`>\[\]]", "", text)
     text = re.sub(r"[\U0001F300-\U0001FAFF☀-➿]", "", text)  # emoji

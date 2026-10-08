@@ -1,0 +1,11 @@
+# 照護情境對話的延遲改進（2026-10-07）：緊急快速通道＋第一句縮短＋子句切段。設計見 configs/suites/dialogue_care_fast.yaml。
+#   python run_all.py --plan configs/plans/round3_care_fast.yaml --smoke-only
+#   python run_all.py --plan configs/plans/round3_care_fast.yaml --skip-smoke
+name: round3_care_fast
+hw: pc
+
+steps:
+  - name: dialogue_care_fast
+    suite: configs/suites/dialogue_care_fast.yaml
+    score: [--utmos]
+    smoke: {limit: 3, langs: [en, ja]}

@@ -33,6 +33,9 @@ class SupertonicTTS(TTSEngine):
         return self.tts.sample_rate
 
     def synthesize_stream(self, text, lang):
+        ok, bad = self.tts.model.text_processor.validate_text(text)
+        if not ok:  # 遇到不支援的字元整句會報錯；LLM 回答偶爾會有，先濾掉
+            text = "".join(ch for ch in text if ch not in bad)
         wav, _ = self.tts.synthesize(text, voice_style=self.styles[lang], total_steps=self.total_steps,
                                      speed=self.speed, lang=LANG_CODES[lang])
         yield np.asarray(wav[0], dtype=np.float32)

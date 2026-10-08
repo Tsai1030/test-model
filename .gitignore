@@ -8,5 +8,7 @@ data/recordings/
 data/noise/
 data/manifests/
 data/cache/
+data/llm/
+data/care/audio/
 logs/
 results/

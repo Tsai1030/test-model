@@ -395,7 +395,101 @@
  },
  "dialogue": [
   {
-   "name": "Whisper small + gemma-3-4b-q4 + piper-medium",
+   "name": "新｜推薦 STT ＋ Qwen2.5-1.5B ＋ Piper（無 ja）",
+   "run": "20261005-163306_round2_dialogue_dialogue_new_pc",
+   "langs": [
+    "en",
+    "es-419",
+    "es-ES",
+    "pt-BR",
+    "pt-PT"
+   ],
+   "turn_p50_by_lang": {
+    "en": 1744.4,
+    "es-419": 1576.0,
+    "es-ES": 1676.2,
+    "pt-BR": 1524.8,
+    "pt-PT": 1625.2
+   },
+   "vad": 300.0,
+   "stt": 293.6,
+   "llm": 860.86,
+   "tts": 174.84,
+   "total": 1629.3,
+   "facts_min": 0.5,
+   "facts_max": 0.8333
+  },
+  {
+   "name": "新｜推薦 STT ＋ Qwen2.5-1.5B ＋ Supertonic-3",
+   "run": "20261005-163306_round2_dialogue_dialogue_new_pc",
+   "langs": [
+    "en",
+    "es-419",
+    "es-ES",
+    "ja",
+    "pt-BR",
+    "pt-PT"
+   ],
+   "turn_p50_by_lang": {
+    "en": 2572.8,
+    "es-419": 2277.3,
+    "es-ES": 1983.6,
+    "pt-BR": 2122.9,
+    "pt-PT": 3438.7,
+    "ja": 2268.3
+   },
+   "vad": 300.0,
+   "stt": 277.85,
+   "llm": 923.3666666666667,
+   "tts": 942.7,
+   "total": 2443.916666666667,
+   "facts_min": 0.5,
+   "facts_max": 1.0
+  },
+  {
+   "name": "新｜推薦 STT ＋ Gemma-3-4B ＋ Supertonic-3",
+   "run": "20261005-163306_round2_dialogue_dialogue_new_pc",
+   "langs": [
+    "en",
+    "es-419",
+    "es-ES",
+    "ja",
+    "pt-BR",
+    "pt-PT"
+   ],
+   "turn_p50_by_lang": {
+    "en": 3246.9,
+    "es-419": 4209.6,
+    "es-ES": 2902.9,
+    "pt-BR": 4502.7,
+    "pt-PT": 4628.5,
+    "ja": 3111.3
+   },
+   "vad": 300.0,
+   "stt": 265.6666666666667,
+   "llm": 2074.4333333333334,
+   "tts": 1126.8833333333334,
+   "total": 3766.9833333333336,
+   "facts_min": 0.6667,
+   "facts_max": 1.0
+  },
+  {
+   "name": "舊｜Whisper small ＋ Gemma-3-4B ＋ Piper（無 ja）",
+   "run": "20260930-102219_round1_dialogue_pc",
+   "langs": [
+    "en",
+    "es-419",
+    "es-ES",
+    "pt-BR",
+    "pt-PT"
+   ],
+   "turn_p50_by_lang": {
+    "en": 3269.9,
+    "es-419": 4320.1,
+    "es-ES": 2887.1,
+    "pt-BR": 3250.3,
+    "pt-PT": 3643.4
+   },
    "vad": 300.0,
    "stt": 1253.18,
    "llm": 1777.8,
@@ -405,53 +499,28 @@
    "facts_max": 1.0
   },
   {
-   "name": "Whisper small + qwen2.5-1.5b-q4 + kokoro-82m",
+   "name": "舊｜Whisper small ＋ Qwen2.5-1.5B ＋ Kokoro（無 pt-PT）",
+   "run": "20260930-102219_round1_dialogue_pc",
+   "langs": [
+    "en",
+    "es-419",
+    "es-ES",
+    "ja",
+    "pt-BR"
+   ],
+   "turn_p50_by_lang": {
+    "en": 3682.9,
+    "es-419": 3772.0,
+    "es-ES": 3709.5,
+    "ja": 3552.1,
+    "pt-BR": 3414.8
+   },
    "vad": 300.0,
    "stt": 1434.3799999999999,
    "llm": 764.78,
    "tts": 1127.08,
    "total": 3626.24,
    "facts_min": 0.5,
-   "facts_max": 1.0
-  },
-  {
-   "name": "Whisper small + gemma-3-1b-q4 + kokoro-82m",
-   "vad": 300.0,
-   "stt": 1502.18,
-   "llm": 704.54,
-   "tts": 1212.56,
-   "total": 3719.28,
-   "facts_min": 0.5,
-   "facts_max": 0.6667
-  },
-  {
-   "name": "Whisper small + qwen2.5-3b-q4 + kokoro-82m",
-   "vad": 300.0,
-   "stt": 1223.44,
-   "llm": 1198.88,
-   "tts": 1076.12,
-   "total": 3798.44,
-   "facts_min": 0.6667,
-   "facts_max": 0.8333
-  },
-  {
-   "name": "Whisper small + gemma-3-4b-q4 + kokoro-82m",
-   "vad": 300.0,
-   "stt": 1650.58,
-   "llm": 2107.7,
-   "tts": 1540.24,
-   "total": 5598.5199999999995,
-   "facts_min": 0.6667,
-   "facts_max": 1.0
-  },
-  {
-   "name": "Whisper large-v3-turbo + gemma-3-4b-q4 + kokoro-82m",
-   "vad": 300.0,
-   "stt": 8755.08,
-   "llm": 1816.76,
-   "tts": 1430.8600000000001,
-   "total": 12302.7,
-   "facts_min": 0.6667,
    "facts_max": 1.0
   }
  ]

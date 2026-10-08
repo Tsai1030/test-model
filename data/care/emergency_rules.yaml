@@ -1,0 +1,66 @@
+# 緊急警訊規則層（草稿 v0.1，2026-10-07）：在 LLM 之前比對 STT 文字，命中就立即通知醫護並播放固定回應。
+# 分類依 policy_v3.md 的緊急清單；**未經護理人員審核**。撰寫時已看過 scenarios.yaml，
+# 以同一批題目評估的結果會偏樂觀，需用新題目驗證。
+#
+# 格式：每種語言（en / es / pt / ja，方言共用）一串規則；每條規則的 all 中每個 regex 都要命中（AND），
+#       regex 內用 | 表示「或」。比對前文字會正規化：轉小寫、去重音（es / pt）、日語去掉空白。
+# 已知限制：不處理否定句（例如「胸口不痛」也會命中），寧可多報。
+version: "0.1"
+rules:
+  en:
+    - {id: chest,        all: ['\bchest\b', '\b(pain|hurt|tight|heav|pressure|crush|squeez|ache)']}
+    - {id: breathing,    all: ["(can'?t|cannot|can not) (breathe|catch my breath)|short of breath|trouble breathing|out of breath|struggling to breathe|breathless"]}
+    - {id: stroke_face,  all: ['\bface\b', '(droop|numb|sag|twist)']}
+    - {id: stroke_limb,  all: ['\b(arm|hand|leg|side)\b', "(weak|numb|dead|can'?t move|cannot move|no strength)"]}
+    - {id: stroke_speech, all: ['\b(speech|words|speak|talk)', "(slur|wrong|trouble|strange|jumbl|can'?t)"]}
+    - {id: fall,         all: ["\\bfell\\b|\\bfallen\\b|fall(en)? down|(can'?t|cannot) get up"]}
+    - {id: bleeding,     all: ['bleed|blood', "(a lot|won'?t stop|not stop|keeps|heavy|lots)"]}
+    - {id: faint,        all: ['faint|passed out|black(ed)? out|pass out']}
+    - {id: unresponsive, all: ["not respond|isn'?t respond|not answer|isn'?t answer|unresponsive|won'?t wake|seizure|convuls"]}
+    - {id: swelling,     all: ['\b(lip|lips|throat|tongue)\b', '(swell|swollen|tight|closing)']}
+    - {id: headache,     all: ['headache|\bhead\b', '(worst|sudden|terrible|severe|explod|never had)']}
+    - {id: sweat_shake,  all: ['sweat', '(shak|confus|muddl|dizzy|clammy)']}
+    - {id: confusion,    all: ['sudden(ly)? confus']}
+    - {id: suicide,      all: ["kill myself|end (it all|my life)|don'?t want to live|want to die|suicid|hurt myself|harm myself|not worth living"]}
+  es:
+    - {id: chest,        all: ['\bpecho\b', '(dolor|duele|apret|oprim|presion|pesad)']}
+    - {id: breathing,    all: ['no puedo respirar|me falta (el )?aire|no me alcanza el aire|\bahog|dificultad (para|al) respirar|falta de aire']}
+    - {id: stroke_face,  all: ['\bcara\b', '(caid|torcid|dormid|paraliz|colgand)']}
+    - {id: stroke_limb,  all: ['\b(brazo|mano|pierna|lado)\b', '(sin fuerza|debil|dormid|entumid|no (la |lo )?puedo mover|paraliz)']}
+    - {id: stroke_speech, all: ['\b(hablar|palabras|habla)\b', '(me trabo|no me salen|trab|raro|cuesta|enreda)']}
+    - {id: fall,         all: ['me he caido|me cai\b|no me puedo (levantar|parar)|no puedo (levantarme|pararme)']}
+    - {id: bleeding,     all: ['sangr', '(mucho|no para|sigue|abundante|no deja)']}
+    - {id: faint,        all: ['desmay|perdi el conocimiento']}
+    - {id: unresponsive, all: ['no (me )?(responde|contesta)|convulsi|inconscien']}
+    - {id: swelling,     all: ['\b(labios|garganta|lengua)\b', '(hinch|cerrad|apret)']}
+    - {id: headache,     all: ['dolor de cabeza|\bcabeza\b', '(peor|horrible|terrible|de repente|insoportable)']}
+    - {id: sweat_shake,  all: ['sud(ando|or|ado)', '(tiembl|temblor|confus|mare|embotad)']}
+    - {id: suicide,      all: ['no quiero vivir|quitarme la vida|acabar con todo|terminar con todo|matarme|suicid|hacerme dano']}
+  pt:
+    - {id: chest,        all: ['\bpeito\b', '(\bdor\b|\bdoi|apertad|aperto|pesad|pressao)']}
+    - {id: breathing,    all: ['falta de ar|sem ar\b|nao consigo respirar|dificuldade (para|em|de) respirar|nao respiro']}
+    - {id: stroke_face,  all: ['\b(rosto|cara|boca)\b', '(caiu|caid|descaid|torto|torta|dormente)']}
+    - {id: stroke_limb,  all: ['\b(braco|mao|perna|lado)\b', '(fraca|fraco|sem forca|dormente|nao consigo mexer|paralis)']}
+    - {id: stroke_speech, all: ['\b(falar|palavras|fala)\b', '(nao (me )?saem|nao estao saindo|enrol|dificuldade|estranh|piorando)']}
+    - {id: fall,         all: ['\bcai\b|\bcaiu\b|nao consigo (me )?levantar|nao me consigo levantar']}
+    - {id: bleeding,     all: ['sangr', '(muito|nao para|sem parar|sempre)']}
+    - {id: faint,        all: ['desmai|perdi os sentidos|apaguei']}
+    - {id: unresponsive, all: ['nao (me )?responde|nao reage|convuls|desacordad|inconscien']}
+    - {id: swelling,     all: ['\b(labios|garganta|lingua)\b', '(inch|fechand|apertad)']}
+    - {id: headache,     all: ['dor de cabeca|\bcabeca\b', '(pior|horrivel|terrivel|de repente|insuportavel)']}
+    - {id: sweat_shake,  all: ['(suand|suor|suado|suar)', '(trem|confus|tont)']}
+    - {id: suicide,      all: ['nao quero (mais )?viver|acabar com tudo|me matar|matar-me|tirar a (minha )?vida|suicid']}
+  ja:
+    - {id: chest,        all: ['胸', '(痛|苦し|締め|しめつ|重い|重く|圧迫)']}
+    - {id: breathing,    all: ['息が(苦し|でき|吸え|しづら)|呼吸が(苦し|でき|しづら)|息切れ']}
+    - {id: stroke_face,  all: ['顔', '(下が|ゆが|歪|しびれ|痺れ|垂れ)']}
+    - {id: stroke_limb,  all: ['(手|腕|足|片側|半身)', '(力が入らな|しびれ|痺れ|動かな)']}
+    - {id: stroke_speech, all: ['(言葉|ろれつ|呂律)', '(出てこな|出ない|回らな|うまく)']}
+    - {id: fall,         all: ['転ん|転倒|倒れ|起き上がれな']}
+    - {id: bleeding,     all: ['血', '(止まらな|たくさん|いっぱい|大量)']}
+    - {id: faint,        all: ['気を失|失神|気絶']}
+    - {id: unresponsive, all: ['返事(しな|がな)|反応(がな|しな)|けいれん|痙攣|意識がな']}
+    - {id: swelling,     all: ['(唇|喉|のど|舌)', '(腫れ|はれ|締め付け|締めつけ|しめつけ)']}
+    - {id: headache,     all: ['頭', '(ものすごく痛|激し|割れ|急に痛|初めて)']}
+    - {id: sweat_shake,  all: ['冷や汗|汗.*(震え|ふるえ|ぼーっと|ぼうっと)']}
+    - {id: suicide,      all: ['死にた|生きていたくな|終わらせ|自殺|消えたい']}

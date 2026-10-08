@@ -1,0 +1,12 @@
+# 第二輪：用第三晚選出的 STT / TTS 重跑語音對話（2026-10-05）。設計理由見 docs/roadmap.md。
+#   python run_all.py --plan configs/plans/round2_dialogue.yaml --smoke-only     # 冒煙測試（約 15 分鐘）
+#   python run_all.py --plan configs/plans/round2_dialogue.yaml --skip-smoke     # 正式測試（約 1–1.5 小時）
+# 使用與第二晚相同的題目與提問音檔；report.py 會與先前結果合併。
+name: round2_dialogue
+hw: pc
+
+steps:
+  - name: dialogue_new
+    suite: configs/suites/dialogue_new.yaml
+    score: [--utmos]                                  # 與第二晚相同：不做 Whisper 回測
+    smoke: {limit: 1, langs: [en, es-ES, pt-PT, ja]}  # 涵蓋 4 個 STT 與 4 個 TTS

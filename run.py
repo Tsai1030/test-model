@@ -23,9 +23,11 @@ import yaml
 
 from bench import languages as L
 from bench.audio import STT_SR, load_audio, resample, save_wav
+from bench import care_rules
+from bench.care import CARE, action_ok, care_system, load_scenarios, spoken_text, strip_think, tag_of
 from bench.envinfo import collect_env
 from bench.monitor import ResourceMonitor
-from bench.text import clean_for_tts, first_complete_sentence, split_sentences
+from bench.text import clean_for_tts, first_complete_clause, first_complete_sentence, split_sentences
 from engines.base import build_engine
 
 ROOT = Path(__file__).resolve().parent
@@ -241,11 +243,11 @@ def system_prompt(lang, venue):
     )
 
 
-def question_audio(q, lang, question_tts, cache):
+def question_audio(q, lang, question_tts, cache, audio_dir=None):
     """問題音檔：manifest 有就用；沒有就用 question_tts 合成一次並快取（標記 synthetic）。"""
     if q.get("audio"):
         return load_audio(ROOT / q["audio"]), False
-    path = ROOT / "data" / "dialogue" / "audio" / lang / f"{q['id']}.wav"
+    path = (audio_dir or ROOT / "data" / "dialogue" / "audio") / lang / f"{q['id']}.wav"
     if not path.exists():
         tts_id = question_tts.get(lang, question_tts["default"])
         engine = cache.get("tts", tts_id)
@@ -285,12 +287,32 @@ class EngineCache:
 
 
 def run_dialogue(suite, models, out, args):
+    # questions: museum（預設，data/dialogue/ 導覽問答）或 care（data/care/ 照護情境題，系統提示與 llm_eval.py 相同）
+    care = suite.get("questions") == "care"
+    # 延遲改進（2026-10-07）：fast_path = 規則層＋[CALL_NURSE] 觸發時立即通報並播放固定回應；
+    # first_chunk: clause = TTS 在逗號等子句標點處就開始唸；short_first = 要求 LLM 第一句很短
+    fast_path = care and suite.get("fast_path", False)
+    fixed_texts = yaml.safe_load((CARE / "fixed_responses.yaml").read_text(encoding="utf-8")) if fast_path else {}
+
+    def first_chunk(text, lang):
+        if suite.get("first_chunk") == "clause":
+            return first_complete_clause(text, 6 if L.base(lang) == "ja" else 12)
+        return first_complete_sentence(text)
+    dataset = "care" if care else "dialogue"
+    audio_dir = ROOT / "data" / dataset / "audio"
     venue = (ROOT / suite.get("venue_file", "data/dialogue/venue.md")).read_text(encoding="utf-8")
     vad_s = suite.get("vad_endpoint_ms", 300) / 1000
     cache = EngineCache(models, out)
     try:
+        if care:   # 先合成全部提問音檔並釋放 TTS，避免它佔用第一個組合的記憶體、干擾量測
+            for lang in suite["languages"]:
+                for s in load_scenarios(suite.get("ids"))[: suite.get("n_samples")]:
+                    question_audio({"id": s["id"], "text": s["text"][lang]}, lang, suite["question_tts"], cache, audio_dir)
+            cache.keep_only(set())
         for combo in suite["combos"]:
             name = f"{combo['stt']}+{combo['llm']}+{combo['tts']}"
+            if not set(combo.get("langs", suite["languages"])) & set(suite["languages"]):
+                continue    # 這個組合的語言都不在本次範圍（例如冒煙測試只跑部分語言），不必載入模型
             stt = llm = tts = None      # 先放掉上一組的引用，keep_only 才真的釋放得掉
             cache.keep_only({(k, combo[k]) for k in ("stt", "llm", "tts")})
             try:
@@ -301,40 +323,62 @@ def run_dialogue(suite, models, out, args):
                 print(f"!! skip combo {name}: {exc}")
                 continue
             for lang in suite["languages"]:
+                if lang not in combo.get("langs", suite["languages"]):
+                    continue    # 組合指定只跑某些語言（依語言選 STT 的部署方式）
                 if lang not in models["stt"][combo["stt"]].get("langs", L.ALL) or not tts.supports(lang):
                     print(f"  skip {name} {lang}: unsupported")
                     continue
                 tts.prepare(lang)
                 sr = tts.sample_rate_for(lang)
-                questions = read_jsonl(ROOT / "data" / "dialogue" / f"{lang}.jsonl")[: suite.get("n_samples")]
-                sys_msg = system_prompt(lang, venue)
+                # 固定回應事先合成（實際部署為預錄音檔，播放延遲視為 0）
+                fixed_audio = synth_timed(tts, fixed_texts[lang], lang, True)[0] if fast_path else None
+                if care:
+                    questions = [{"id": s["id"], "text": s["text"][lang], "action": s["action"],
+                                  "category": s["category"], "reasoning": "reasoning" in s.get("tags", []),
+                                  "history": [{"role": h["role"], "content": h["text"][lang]} for h in s.get("history", [])]}
+                                 for s in load_scenarios(suite.get("ids"))][: suite.get("n_samples")]
+                    sys_msg = care_system(lang, suite.get("policy", "policy.md"), suite.get("short_first", False))
+                else:
+                    questions = read_jsonl(ROOT / "data" / "dialogue" / f"{lang}.jsonl")[: suite.get("n_samples")]
+                    sys_msg = system_prompt(lang, venue)
+                user_suffix = models["llm"][combo["llm"]].get("user_suffix", "")   # 例：Qwen3 的 /no_think
                 print(f"  {name} {lang}: {len(questions)} questions")
 
                 def turn(q, save_prefix=None):
-                    audio, synthetic = question_audio(q, lang, suite["question_tts"], cache)
+                    audio, synthetic = question_audio(q, lang, suite["question_tts"], cache, audio_dir)
                     t = now()
                     res = stt.transcribe(audio, lang if stt.wants_locale else L.base(lang))
                     t_stt = now() - t
-
-                    messages = [{"role": "system", "content": sys_msg}, {"role": "user", "content": res.text}]
                     t = now()
-                    buf, n_tok, ttft, first_sent, t_first_sent = "", 0, None, None, None
+                    rule_hits = care_rules.match(res.text, lang) if fast_path else []   # 規則層：在 LLM 之前比對
+                    t_rule = now() - t
+
+                    messages = [{"role": "system", "content": sys_msg}, *q.get("history", []),
+                                {"role": "user", "content": res.text + user_suffix}]
+                    t = now()
+                    buf, n_tok, ttft, first_sent, t_first_sent, t_tag = "", 0, None, None, None, None
                     for piece in llm.chat_stream(messages, suite.get("max_tokens", 160), suite.get("temperature", 0.3)):
                         n_tok += 1
                         if ttft is None:
                             ttft = now() - t
                         buf += piece
+                        visible = strip_think(buf)
+                        if t_tag is None and tag_of(visible):
+                            t_tag = now() - t       # 讀到通報標記的時間：系統此時即可通知醫護
                         if first_sent is None:
-                            first_sent = first_complete_sentence(buf)
+                            first_sent = first_chunk(spoken_text(visible), lang)   # 標記不唸
                             if first_sent is not None:
                                 t_first_sent = now() - t
                     t_llm = now() - t
-                    response = buf.strip()
+                    response = spoken_text(strip_think(buf))
                     if first_sent is None:
                         first_sent, t_first_sent = response, t_llm
 
                     # 第一句先送 TTS：真實系統中 LLM 會同時繼續生成，這裡的首段音訊延遲為下限估計
-                    first_audio, t_tts_ttfa, t_tts_first = synth_timed(tts, clean_for_tts(first_sent), lang, False)
+                    if first_sent:
+                        first_audio, t_tts_ttfa, t_tts_first = synth_timed(tts, clean_for_tts(first_sent), lang, False)
+                    else:   # 回答只有通報標記、沒有要唸的內容
+                        first_audio, t_tts_ttfa, t_tts_first = np.zeros(int(0.2 * sr), dtype=np.float32), 0.0, 0.0
                     row = {
                         "id": q["id"], "lang": lang, "question": q["text"], "question_synthetic": synthetic,
                         "stt_hyp": res.text, "response": response, "first_sentence": first_sent,
@@ -346,9 +390,33 @@ def run_dialogue(suite, models, out, args):
                         "vad_endpoint_s": vad_s,
                         "turn_latency_s": round(vad_s + t_stt + t_first_sent + t_tts_ttfa, 4),
                     }
+                    if care:
+                        tag = tag_of(strip_think(buf))
+                        row.update({
+                            "history": q["history"], "response_raw": strip_think(buf).strip(), "tag": tag,
+                            "action": q["action"], "category": q["category"], "reasoning": q["reasoning"],
+                            "action_ok": action_ok(q["action"], tag),
+                            "llm_tag_s": round(t_tag, 4) if t_tag is not None else None,
+                            # 住民說完 → 系統讀到通報標記（緊急情況真正關鍵的時間，不必等 TTS）
+                            "alert_latency_s": round(vad_s + t_stt + t_tag, 4) if t_tag is not None else None,
+                        })
+                    if fast_path:
+                        # 規則命中或 LLM 給出 [CALL_NURSE] → 立即通報並播放固定回應；兩者都有時取規則（較早）
+                        trigger = "rule" if rule_hits else ("tag" if tag == "call" else None)
+                        final_tag = "call" if rule_hits else tag
+                        t_alert = t_rule if trigger == "rule" else t_tag
+                        row.update({
+                            "rule_hits": rule_hits, "rule_s": round(t_rule, 6), "fast_trigger": trigger,
+                            "final_tag": final_tag, "final_action_ok": action_ok(q["action"], final_tag),
+                            "rule_alert_latency_s": round(vad_s + t_stt + t_rule, 4) if rule_hits else None,
+                            # 實際開口時間：緊急走快速通道（固定回應），其他照一般流程
+                            "response_latency_s": round(vad_s + t_stt + t_alert, 4) if trigger else row["turn_latency_s"],
+                        })
                     if save_prefix and suite.get("synthesize_full", True):
                         rest = response[len(first_sent):].strip() if response.startswith(first_sent) else ""
                         parts = [first_audio]
+                        if fast_path and row.get("fast_trigger"):
+                            parts = [fixed_audio, np.zeros(int(0.3 * sr), dtype=np.float32), first_audio]
                         if rest:
                             parts.append(synth_timed(tts, clean_for_tts(rest), lang, True)[0])
                         rel = Path("audio") / save_prefix / lang / f"{q['id']}.wav"
@@ -356,6 +424,8 @@ def run_dialogue(suite, models, out, args):
                         row["wav"], row["sr"] = rel.as_posix(), sr
                     return row
 
+                # 每個組合×語言各自監控：此時程序內只載入這一組的三個模型，峰值即整條鏈路的記憶體
+                mon = ResourceMonitor().start()
                 try:
                     for q in questions[: suite.get("warmup", 1)]:
                         turn(q)
@@ -363,11 +433,14 @@ def run_dialogue(suite, models, out, args):
                 except Exception:
                     print(f"!! {name} {lang} failed:\n{traceback.format_exc()}")
                     continue
-                key = f"{name}__{lang}__dialogue__clean"
+                finally:
+                    mon.stop()
+                key = f"{name}__{lang}__{dataset}__clean"
                 write_jsonl(out / "raw" / f"{key}.jsonl", rows)
                 write_json(out / "raw" / f"{key}.meta.json", {
                     "task": "dialogue", "model": name, "combo": combo, "lang": lang,
-                    "dataset": "dialogue", "condition": "clean",
+                    "dataset": dataset, "condition": "clean", "resources": mon.result(),
+                    **({"policy": suite.get("policy", "policy.md")} if care else {}),
                 })
     finally:
         cache.close()

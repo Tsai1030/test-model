@@ -120,7 +120,8 @@ def score_rows(df, cfg):
                 "resource": lin(mem, sc["mem_mb"]),
             }
         elif task == "dialogue":
-            quality_parts = [num(row.get("fact_recall")), num(row.get("lang_ok_rate"))]
+            quality_parts = [num(row.get("fact_recall")), num(row.get("lang_ok_rate")),
+                             num(row.get("care_action_ok_rate"))]
             hr = num(row.get("human_relevance"))
             if hr is not None:
                 quality_parts.append((hr - 1) / 4)
@@ -206,7 +207,25 @@ def section_tts(g):
                      "RTF p50", "串流", "記憶體 MB", "授權"], rows)
 
 
+def section_care(g):
+    """照護情境題的對話：回答品質看通報標記，另列通報延遲（住民說完 → 系統讀到標記）。"""
+    rows = []
+    for i, (_, r) in enumerate(rank(g).iterrows(), 1):
+        rows.append([i, r.model, fmt(r.score), r.gate,
+                     f"{fmt(r.turn_latency_ms_p50, 'int')} / {fmt(r.turn_latency_ms_p90, 'int')}",
+                     fmt(r.alert_latency_ms_p50, "int"), fmt(r.stt_ms_p50, "int"),
+                     fmt(r.llm_first_sentence_ms_p50, "int"), fmt(r.tts_ttfa_ms_p50, "int"),
+                     fmt(r.care_action_ok_rate, "pct"), fmt(r.emergency_miss_rate, "pct"),
+                     fmt(r.get("rule_alert_latency_ms_p50"), "int"), fmt(r.get("final_emergency_miss_rate"), "pct"),
+                     fmt(r.question_err_rate, "pct"), fmt(r.lang_ok_rate, "pct")])
+    return md_table(["#", "組合 (STT+LLM+TTS)", "總分", "門檻", "回合延遲 ms p50/p90", "通報延遲 ms",
+                     "STT ms", "LLM 首句 ms", "TTS 首段 ms", "預期等級達成", "緊急漏報",
+                     "規則層通報延遲 ms", "規則＋LLM 緊急漏報", "提問辨識錯誤", "語言正確"], rows)
+
+
 def section_dialogue(g):
+    if "dataset" in g and (g.dataset == "care").all():
+        return section_care(g)
     rows = []
     for i, (_, r) in enumerate(rank(g).iterrows(), 1):
         rows.append([i, r.model, fmt(r.score), r.gate,
@@ -231,7 +250,7 @@ def recommendations(scored, priority):
             pick = "無模型通過門檻" if has_data else "–"
             for hw in priority:
                 g = scored[(scored.task == task) & (scored.lang == lang) & (scored.hw_profile == hw)
-                           & (scored.gate == "PASS")]
+                           & (scored.gate == "PASS") & (scored.dataset != "care")]   # 推薦表維持導覽問答
                 if len(g):
                     best = rank(g).iloc[0]
                     pick = f"{best.model}（{fmt(best.score)} 分，{hw}）"
@@ -343,8 +362,10 @@ def main():
             md += ["", f"### {lang} · {L.LANGS[lang]['name']}"]
             for hw in hw_order:
                 g = t[(t.lang == lang) & (t.hw_profile == hw)]
-                if len(g):
-                    md += ["", f"**{hw}**", "", fn(g)]
+                # 對話依題目分表：導覽問答與照護情境的指標不同，不混在一起排名
+                for ds, g_ds in (g.groupby("dataset") if task == "dialogue" else [(None, g)]):
+                    label = {"dialogue": " · 導覽問答", "care": " · 照護情境"}.get(ds, "")
+                    md += ["", f"**{hw}{label}**", "", fn(g_ds)]
     failed = df[df.error.notna() & df.lang.isna()] if "error" in df else pd.DataFrame()
     if len(failed):
         md += ["", "## 執行失敗的模型", md_table(["模型", "任務", "硬體", "錯誤"],

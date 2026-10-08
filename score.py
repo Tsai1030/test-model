@@ -41,6 +41,12 @@ SUMMARY_COLUMNS = [
     "turn_latency_ms_p50", "turn_latency_ms_p90", "vad_endpoint_ms", "stt_ms_p50", "llm_ttft_ms_p50",
     "llm_first_sentence_ms_p50", "llm_tok_s", "tts_ttfa_ms_p50", "question_err_rate",
     "fact_recall", "lang_ok_rate", "human_relevance", "human_naturalness",
+    # 照護情境對話（dataset = care）
+    "care_action_ok_rate", "emergency_miss_rate", "notify_miss_rate", "over_call_rate",
+    "llm_tag_ms_p50", "alert_latency_ms_p50",
+    # 緊急快速通道（規則層＋固定回應）
+    "rule_recall", "rule_false_alarm_rate", "final_emergency_miss_rate", "final_over_call_rate",
+    "final_action_ok_rate", "rule_alert_latency_ms_p50", "emergency_response_ms_p50", "response_latency_ms_p50",
     "stt_category", "llm_category", "tts_category",
     # 資源
     "peak_ram_mb", "ram_delta_mb", "peak_vram_mb", "sys_ram_delta_mb", "avg_cpu_pct",
@@ -213,6 +219,30 @@ def score_dialogue(items, meta, run_dir, judges):
         "fact_recall": round(float(np.mean(hits)), 4) if hits else None,
         "lang_ok_rate": mean([float(detect(it["response"]) == L.base(lang)) for it in items]),
     }
+    if items and "action" in items[0]:   # 照護情境題：依通報標記評分（定義同 llm_eval.py）
+        calls = [it for it in items if it["action"] == "call_now"]
+        notifies = [it for it in items if it["action"] == "notify"]
+        others = [it for it in items if it["action"] != "call_now"]
+        called = [it for it in calls if it["tag"] == "call"]
+        r.update({
+            "care_action_ok_rate": mean([float(it["action_ok"]) for it in items]),
+            "emergency_miss_rate": mean([float(it["tag"] != "call") for it in calls]),
+            "notify_miss_rate": mean([float(it["tag"] is None) for it in notifies]),
+            "over_call_rate": mean([float(it["tag"] == "call") for it in others]),
+            "llm_tag_ms_p50": pct([it["llm_tag_s"] for it in called], 50, 1000),
+            "alert_latency_ms_p50": pct([it["alert_latency_s"] for it in called], 50, 1000),
+        })
+        if "final_tag" in items[0]:   # 緊急快速通道：規則層 ＋ LLM 標記，取較高等級
+            r.update({
+                "rule_recall": mean([float(bool(it["rule_hits"])) for it in calls]),
+                "rule_false_alarm_rate": mean([float(bool(it["rule_hits"])) for it in others]),
+                "final_emergency_miss_rate": mean([float(it["final_tag"] != "call") for it in calls]),
+                "final_over_call_rate": mean([float(it["final_tag"] == "call") for it in others]),
+                "final_action_ok_rate": mean([float(it["final_action_ok"]) for it in items]),
+                "rule_alert_latency_ms_p50": pct([it["rule_alert_latency_s"] for it in calls], 50, 1000),
+                "emergency_response_ms_p50": pct([it["response_latency_s"] for it in calls if it["fast_trigger"]], 50, 1000),
+                "response_latency_ms_p50": pct([it["response_latency_s"] for it in items], 50, 1000),
+            })
     r.update(intelligibility_and_mos(items, lang, run_dir, judges, "response"))
     return r
 
@@ -309,8 +339,10 @@ def main():
             row["license"] = " / ".join(str(parts[k]["license"]) for k in parts)
             metas = [model_meta(raw, combo[k]) for k in ("stt", "llm", "tts")]
             res = [resource_cols(m) for m in metas]
-            # 三個模型同在一個程序內：峰值 RAM 取最大值 = 整條鏈路的記憶體占用
-            row["peak_ram_mb"] = max((r["peak_ram_mb"] or 0) for r in res) or None
+            # 新版 run 每個組合×語言各自監控；舊 run 沒有，退回取三個模型監控值的最大值
+            # （模型跨組合沿用時監控期間較長，會高估）
+            own = (meta.get("resources") or {}).get("peak_ram_mb")
+            row["peak_ram_mb"] = own or max((r["peak_ram_mb"] or 0) for r in res) or None
             row["load_time_s"] = sum((r["load_time_s"] or 0) for r in res)
             row.update(score_dialogue(items, meta, run_dir, judges))
         if args.asr_judge and task in ("tts", "dialogue"):

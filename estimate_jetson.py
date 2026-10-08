@@ -89,6 +89,14 @@ def estimate():
                 "turn_latency_ms_p90": round(row["vad_endpoint_ms"] + (row["turn_latency_ms_p90"] - row["vad_endpoint_ms"]) * ratio, 1),
                 "est_note": " / ".join(f"{p} k={fs[p]['k']} ({fs[p]['source']})" for p in fs),
             })
+            if pd.notna(row.get("llm_tag_ms_p50")):   # 照護對話：住民說完 → 讀到通報標記
+                tag = row["llm_tag_ms_p50"] / fs["llm"]["k"]
+                row["llm_tag_ms_p50"] = round(tag, 1)
+                row["alert_latency_ms_p50"] = round(row["vad_endpoint_ms"] + stt + tag, 1)
+            if pd.notna(row.get("rule_alert_latency_ms_p50")):   # 規則層比對只需數毫秒，只換算 STT
+                row["rule_alert_latency_ms_p50"] = round(row["vad_endpoint_ms"] + stt, 1)
+            for c in ("emergency_response_ms_p50", "response_latency_ms_p50"):
+                row[c] = None   # 規則與 LLM 兩種觸發混在一起，無法用單一係數換算；看上面兩個欄位
             for p in ("stt", "llm", "tts"):
                 row[f"{p}_category"] = fs[p]["jetson_backend"]
         else:
